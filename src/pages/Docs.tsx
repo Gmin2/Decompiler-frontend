@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Background,
   Controls,
@@ -14,190 +14,185 @@ import {
   type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { PATTERNS, PATTERN_CATEGORIES } from '../data/contracts';
+import { PATTERNS, PATTERN_CATEGORIES, type Pattern } from '../data/contracts';
 
-type FlowNodeData = {
-  title: string;
-  subtitle: string;
-  tone?: 'core' | 'type' | 'io';
+type NodeData = {
+  label: string;
+  sublabel?: string;
+  kind: 'center' | 'category' | 'pattern';
+  status?: 'handled' | 'partial' | 'unhandled';
+  patternName?: string;
 };
 
-const initialNodes: Node<FlowNodeData>[] = [
-  {
-    id: 'entry',
-    type: 'docNode',
-    position: { x: 40, y: 180 },
-    data: { title: 'hello(env, to)', subtitle: 'entry function', tone: 'core' },
-  },
-  {
-    id: 'vec',
-    type: 'docNode',
-    position: { x: 340, y: 70 },
-    data: { title: 'vec![&env, ...]', subtitle: 'collection constructor', tone: 'core' },
-  },
-  {
-    id: 'symbol',
-    type: 'docNode',
-    position: { x: 340, y: 290 },
-    data: { title: 'symbol_short!("Hello")', subtitle: 'macro / symbol literal', tone: 'type' },
-  },
-  {
-    id: 'return',
-    type: 'docNode',
-    position: { x: 700, y: 160 },
-    data: { title: 'Vec<Symbol>', subtitle: 'return path', tone: 'io' },
-  },
-  {
-    id: 'host',
-    type: 'docNode',
-    position: { x: 700, y: 360 },
-    data: { title: 'host import map', subtitle: 'resolved calls', tone: 'type' },
-  },
-];
-
-const initialEdges: Edge[] = [
-  {
-    id: 'e1',
-    source: 'entry',
-    target: 'vec',
-    label: 'builds',
-    markerEnd: { type: MarkerType.ArrowClosed, color: '#d67a76' },
-    style: { stroke: '#d67a76', strokeWidth: 1.5 },
-    labelStyle: { fill: '#8f8477', fontSize: 11, letterSpacing: '0.08em' },
-  },
-  {
-    id: 'e2',
-    source: 'entry',
-    target: 'symbol',
-    label: 'emits',
-    markerEnd: { type: MarkerType.ArrowClosed, color: '#d67a76' },
-    style: { stroke: '#d67a76', strokeWidth: 1.5 },
-    labelStyle: { fill: '#8f8477', fontSize: 11, letterSpacing: '0.08em' },
-  },
-  {
-    id: 'e3',
-    source: 'vec',
-    target: 'return',
-    label: 'returns',
-    markerEnd: { type: MarkerType.ArrowClosed, color: '#d67a76' },
-    style: { stroke: '#d67a76', strokeWidth: 1.5 },
-    labelStyle: { fill: '#8f8477', fontSize: 11, letterSpacing: '0.08em' },
-  },
-  {
-    id: 'e4',
-    source: 'symbol',
-    target: 'return',
-    label: 'pushes',
-    markerEnd: { type: MarkerType.ArrowClosed, color: '#d67a76' },
-    style: { stroke: '#d67a76', strokeWidth: 1.5 },
-    labelStyle: { fill: '#8f8477', fontSize: 11, letterSpacing: '0.08em' },
-  },
-  {
-    id: 'e5',
-    source: 'symbol',
-    target: 'host',
-    label: 'maps to',
-    markerEnd: { type: MarkerType.ArrowClosed, color: '#d67a76' },
-    style: { stroke: '#d67a76', strokeWidth: 1.5, strokeDasharray: '5 4' },
-    labelStyle: { fill: '#8f8477', fontSize: 11, letterSpacing: '0.08em' },
-  },
-];
-
-const FUNCTION_TRACE = [
-  { step: 'Decode wasm export', detail: 'Locate exported `hello` entrypoint and derive signature.' },
-  { step: 'Map host imports', detail: 'Resolve symbol construction and vector operations from raw imports.' },
-  { step: 'Recover AST blocks', detail: 'Reconstruct expression tree for the vector literal and return path.' },
-  { step: 'Emit Rust surface syntax', detail: 'Render contractimpl body with readable Soroban SDK types.' },
-];
-
-const TYPE_TABLE = [
-  { name: 'Env', role: 'Context handle', source: 'sdk type' },
-  { name: 'Symbol', role: 'String-like contract atom', source: 'decoded literal' },
-  { name: 'Vec<Symbol>', role: 'Return payload', source: 'recovered container' },
-];
-
-const toneClasses: Record<NonNullable<FlowNodeData['tone']>, string> = {
-  core: 'bg-[#fffdf8]',
-  type: 'bg-[#fbf7ef]',
-  io: 'bg-[#fffaf2]',
+const CATEGORY_POSITIONS: Record<string, { x: number; y: number }> = {
+  Storage: { x: 340, y: 0 },
+  Authentication: { x: 340, y: 140 },
+  Context: { x: 340, y: 280 },
+  Collections: { x: 340, y: 420 },
+  Types: { x: 340, y: 560 },
+  Crypto: { x: 340, y: 700 },
+  Ledger: { x: 340, y: 840 },
+  'Cross-contract': { x: 340, y: 940 },
 };
 
-const FlowCardNode = ({ data, selected }: NodeProps<Node<FlowNodeData>>) => (
-  <div
-    className={`w-[220px] rounded-[24px] border p-4 text-left shadow-[0_16px_40px_rgba(58,46,30,0.05)] transition ${
-      selected ? 'border-[#f08b57] ring-1 ring-[#f08b57]/25' : 'border-[#ddd4c8]'
-    } ${toneClasses[data.tone ?? 'core']}`}
-  >
-    <Handle type="target" position={Position.Left} className="!h-3 !w-3 !border-2 !border-[#fdfbf7] !bg-[#d67a76]" />
-    <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">
-      {data.tone === 'core' ? 'core node' : data.tone === 'type' ? 'type node' : 'output node'}
+function buildGraph() {
+  const nodes: Node<NodeData>[] = [];
+  const edges: Edge[] = [];
+
+  nodes.push({
+    id: 'center',
+    type: 'catalogNode',
+    position: { x: 0, y: 420 },
+    data: { label: 'Soroban Host Layer', sublabel: `${PATTERNS.length} recognized patterns`, kind: 'center' },
+  });
+
+  PATTERN_CATEGORIES.forEach((cat) => {
+    const pos = CATEGORY_POSITIONS[cat] ?? { x: 340, y: 0 };
+    const patternsInCat = PATTERNS.filter((p) => p.category === cat);
+    const handled = patternsInCat.filter((p) => p.status === 'handled').length;
+
+    nodes.push({
+      id: `cat-${cat}`,
+      type: 'catalogNode',
+      position: pos,
+      data: { label: cat, sublabel: `${handled}/${patternsInCat.length} handled`, kind: 'category' },
+    });
+
+    edges.push({
+      id: `e-center-${cat}`,
+      source: 'center',
+      target: `cat-${cat}`,
+      markerEnd: { type: MarkerType.ArrowClosed, color: '#d67a76' },
+      style: { stroke: '#d67a76', strokeWidth: 1.4 },
+    });
+
+    patternsInCat.forEach((p, i) => {
+      const nodeId = `pat-${p.name}`;
+      nodes.push({
+        id: nodeId,
+        type: 'catalogNode',
+        position: { x: pos.x + 320, y: pos.y + i * 60 - ((patternsInCat.length - 1) * 30) },
+        data: { label: p.name, kind: 'pattern', status: p.status, patternName: p.name },
+      });
+
+      edges.push({
+        id: `e-${cat}-${p.name}`,
+        source: `cat-${cat}`,
+        target: nodeId,
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#ddd4c8' },
+        style: { stroke: '#ddd4c8', strokeWidth: 1 },
+      });
+    });
+  });
+
+  return { nodes, edges };
+}
+
+const statusColors = {
+  handled: { bg: 'bg-[#78875b]/10', text: 'text-[#78875b]', border: 'border-[#78875b]/30' },
+  partial: { bg: 'bg-[#c4a35a]/10', text: 'text-[#c4a35a]', border: 'border-[#c4a35a]/30' },
+  unhandled: { bg: 'bg-[#87605b]/10', text: 'text-[#87605b]', border: 'border-[#87605b]/30' },
+};
+
+const kindStyles = {
+  center: 'w-[200px] bg-[#171412] text-[#f8f3ea] border-[#171412]',
+  category: 'w-[200px] bg-[#fffdf8] border-[#ddd4c8]',
+  pattern: 'w-[180px] bg-white/90 border-[#e8dfd3]',
+};
+
+const CatalogNode = ({ data, selected }: NodeProps<Node<NodeData>>) => {
+  const sc = data.status ? statusColors[data.status] : null;
+
+  return (
+    <div className={`rounded-[18px] border px-4 py-3 text-left shadow-[0_8px_24px_rgba(58,46,30,0.04)] transition ${
+      selected ? 'ring-2 ring-[#f08b57]/40' : ''
+    } ${kindStyles[data.kind]}`}>
+      <Handle type="target" position={Position.Left} className="!h-2.5 !w-2.5 !border-2 !border-white !bg-[#d67a76]" />
+      {data.kind === 'center' ? (
+        <>
+          <div className="text-[10px] uppercase tracking-[0.22em] text-[#f8f3ea]/60">host runtime</div>
+          <div className="mt-1 text-sm font-medium">{data.label}</div>
+          {data.sublabel && <div className="mt-1 text-[10px] text-[#f8f3ea]/50">{data.sublabel}</div>}
+        </>
+      ) : data.kind === 'category' ? (
+        <>
+          <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">category</div>
+          <div className="mt-1 text-sm font-medium text-[#171412]">{data.label}</div>
+          {data.sublabel && <div className="mt-1 text-[10px] text-[#8f8477]">{data.sublabel}</div>}
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <div className="truncate text-xs font-medium text-[#171412]">{data.label}</div>
+            {sc && (
+              <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] ${sc.bg} ${sc.text}`}>
+                {data.status}
+              </span>
+            )}
+          </div>
+        </>
+      )}
+      <Handle type="source" position={Position.Right} className="!h-2.5 !w-2.5 !border-2 !border-white !bg-[#d67a76]" />
     </div>
-    <div className="mt-2 text-sm font-medium text-[#171412]">{data.title}</div>
-    <div className="mt-2 text-xs leading-6 text-[#72695e]">{data.subtitle}</div>
-    <Handle type="source" position={Position.Right} className="!h-3 !w-3 !border-2 !border-[#fdfbf7] !bg-[#d67a76]" />
-  </div>
-);
-
-const nodeTypes = {
-  docNode: FlowCardNode,
+  );
 };
+
+const nodeTypes = { catalogNode: CatalogNode };
+
+const PIPELINE = [
+  { step: 'Spec Extraction', detail: 'Read contractspecv0 custom section. Recover struct definitions, enum variants, error types, event schemas, and function signatures via XDR deserialization.', output: 'ScSpecEntry[]' },
+  { step: 'Stack Simulation', detail: 'Parse WASM with walrus, trace dispatcher chain, simulate operand stack instruction-by-instruction. Track values through locals, memory, function calls.', output: 'AnalyzedModule' },
+  { step: 'Pattern Recognition', detail: 'Map host call sequences to SDK method chains. Strip Val encoding, decode SymbolSmall, merge i128 pairs. Run 6 optimization passes (CSE, DCE, i128, guards, identity, hoisting).', output: 'FunctionIR[]' },
+  { step: 'Code Generation', detail: 'Walk IR, emit Rust token streams via syn/quote. Reconstruct #[contracttype] structs, #[contractimpl] bodies, storage ops, auth calls. Format with prettyplease.', output: 'String (Rust)' },
+];
 
 const DocsCanvas = () => {
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
-  const [activeNodeId, setActiveNodeId] = useState('entry');
-  const activeNode = nodes.find((node) => node.id === activeNodeId) ?? nodes[0];
+  const { nodes: initNodes, edges: initEdges } = useMemo(buildGraph, []);
+  const [nodes, , onNodesChange] = useNodesState(initNodes);
+  const [edges, , onEdgesChange] = useEdgesState(initEdges);
+  const [selectedPattern, setSelectedPattern] = useState<Pattern | null>(null);
+
+  const handleNodeClick = (_: unknown, node: Node<NodeData>) => {
+    if (node.data.patternName) {
+      const p = PATTERNS.find((pat) => pat.name === node.data.patternName);
+      setSelectedPattern(p ?? null);
+    } else {
+      setSelectedPattern(null);
+    }
+  };
 
   return (
     <div className="px-[4vw] py-10">
       <div className="mx-auto max-w-[1400px]">
-        <section className="paper-panel rounded-[34px] px-7 py-7">
-          <div className="flex items-start justify-between gap-8">
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.28em] text-[#a29a8d]">AST / flow documentation</div>
-              <h1 className="mt-3 text-[clamp(2.3rem,5vw,4.1rem)] leading-[0.95] text-[#171412]">
-                Visualize function flow, extracted types, and host mappings
-              </h1>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-[#72695e]">
-                Parse wasm, recover AST blocks, infer types, and expose function flow as a real node-edge graph for inspection.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              <Badge>xyflow canvas</Badge>
-              <Badge>{PATTERNS.length} host patterns</Badge>
-              <Badge>AST oriented</Badge>
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <section className="mt-0 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="space-y-6">
             <div className="paper-panel overflow-hidden rounded-[32px]">
               <div className="border-b paper-border px-5 py-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <div className="text-[10px] uppercase tracking-[0.24em] text-[#a29a8d]">Function flow graph</div>
-                    <div className="mt-2 text-lg text-[#171412]">`hello` reconstruction pipeline</div>
+                    <div className="text-[10px] uppercase tracking-[0.24em] text-[#a29a8d]">Soroban host function map</div>
+                    <div className="mt-2 text-lg text-[#171412]">
+                      {PATTERNS.length} patterns across {PATTERN_CATEGORIES.length} categories
+                    </div>
                   </div>
                   <div className="text-[11px] uppercase tracking-[0.18em] text-[#8f8477]">
-                    drag nodes / inspect edges
+                    click a pattern node to inspect
                   </div>
                 </div>
               </div>
 
-              <div className="h-[560px] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.9),_transparent_55%),linear-gradient(180deg,#fcfaf5_0%,#f8f3ea_100%)]">
+              <div className="h-[620px] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.9),_transparent_55%),linear-gradient(180deg,#fcfaf5_0%,#f8f3ea_100%)]">
                 <ReactFlow
                   nodes={nodes}
                   edges={edges}
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
-                  onNodeClick={(_, node) => setActiveNodeId(node.id)}
+                  onNodeClick={handleNodeClick}
                   nodeTypes={nodeTypes}
                   fitView
-                  fitViewOptions={{ padding: 0.2 }}
-                  minZoom={0.6}
-                  maxZoom={1.6}
+                  fitViewOptions={{ padding: 0.15 }}
+                  minZoom={0.3}
+                  maxZoom={1.4}
                   proOptions={{ hideAttribution: true }}
                   className="bg-transparent"
                 >
@@ -210,66 +205,115 @@ const DocsCanvas = () => {
               </div>
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-              <div className="paper-panel rounded-[28px] p-5">
-                <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Function reconstruction flow</div>
-                <div className="mt-5 space-y-4">
-                  {FUNCTION_TRACE.map((item, index) => (
-                    <div key={item.step} className="flex gap-4 rounded-2xl border paper-border bg-white/60 px-4 py-4">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#171412] text-[10px] uppercase tracking-[0.12em] text-[#f8f3ea]">
-                        {index + 1}
+            <div className="paper-panel rounded-[28px] p-6">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Decompilation pipeline</div>
+              <div className="mt-2 text-sm text-[#72695e]">4-stage WASM to Rust reconstruction</div>
+              <div className="mt-5 grid gap-4 xl:grid-cols-4">
+                {PIPELINE.map((item, i) => (
+                  <div key={item.step} className="rounded-2xl border paper-border bg-white/60 p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#171412] text-[10px] text-[#f8f3ea]">
+                        {i + 1}
                       </div>
-                      <div>
-                        <div className="text-sm font-medium text-[#171412]">{item.step}</div>
-                        <div className="mt-2 text-sm leading-6 text-[#72695e]">{item.detail}</div>
-                      </div>
+                      <div className="text-sm font-medium text-[#171412]">{item.step}</div>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="paper-panel rounded-[28px] p-5">
-                <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Recovered types</div>
-                <div className="mt-5 overflow-hidden rounded-[24px] border paper-border">
-                  <div className="grid grid-cols-3 bg-white/65 px-4 py-3 text-[10px] uppercase tracking-[0.18em] text-[#a29a8d]">
-                    <span>Type</span>
-                    <span>Role</span>
-                    <span>Source</span>
+                    <div className="mt-3 text-xs leading-5 text-[#72695e]">{item.detail}</div>
+                    <div className="mt-3 rounded-lg bg-[#171412]/5 px-2.5 py-1.5 text-[10px] font-mono text-[#8f8477]">
+                      → {item.output}
+                    </div>
                   </div>
-                  {TYPE_TABLE.map((item) => (
-                    <div key={item.name} className="grid grid-cols-3 border-t paper-border-soft px-4 py-3 text-sm">
-                      <span className="font-medium text-[#171412]">{item.name}</span>
-                      <span className="text-[#72695e]">{item.role}</span>
-                      <span className="text-[#8f8477]">{item.source}</span>
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
             </div>
           </div>
 
           <aside className="space-y-6">
             <div className="paper-panel rounded-[30px] p-5">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Selected node</div>
-              <div className="mt-4 rounded-[24px] border paper-border bg-white/60 px-4 py-4">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-[#a29a8d]">Current focus</div>
-                <div className="mt-2 text-lg font-medium text-[#171412]">{activeNode.data.title}</div>
-                <p className="mt-3 text-sm leading-7 text-[#72695e]">
-                  {activeNode.data.subtitle}. Use the canvas to inspect the recovered execution path, move nodes around, and trace how symbols and collections flow into the final return type.
-                </p>
+              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">
+                {selectedPattern ? 'Pattern detail' : 'Inspector'}
               </div>
-            </div>
 
-            <HostPatternPanel />
+              {selectedPattern ? (
+                <div className="mt-4 space-y-4">
+                  <div className="rounded-2xl border paper-border bg-white/60 px-4 py-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-lg font-medium text-[#171412]">{selectedPattern.name}</div>
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] ${
+                        statusColors[selectedPattern.status].bg
+                      } ${statusColors[selectedPattern.status].text}`}>
+                        {selectedPattern.status}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-[11px] uppercase tracking-[0.16em] text-[#a29a8d]">
+                      {selectedPattern.module} / {selectedPattern.category}
+                    </div>
+                  </div>
 
-            <div className="paper-panel rounded-[30px] p-5">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Graph goals</div>
-              <ul className="mt-4 space-y-3 text-sm leading-6 text-[#72695e]">
-                <li>Trace execution blocks from wasm exports to emitted Rust</li>
-                <li>Show type propagation through recovered expressions</li>
-                <li>Connect host function usage to higher-level AST nodes</li>
-                <li>Bridge graph nodes back to decompiled source segments</li>
-              </ul>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-[#a29a8d] mb-2">Arguments</div>
+                    <div className="rounded-2xl border paper-border bg-white/60 px-4 py-3 font-mono text-xs text-[#544c43]">
+                      {selectedPattern.args || '(none)'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-[#a29a8d] mb-2">Return type</div>
+                    <div className="rounded-2xl border paper-border bg-white/60 px-4 py-3 font-mono text-xs text-[#544c43]">
+                      {selectedPattern.returnType}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-[#a29a8d] mb-2">SDK equivalent</div>
+                    <div className="rounded-2xl border border-[#f08b57]/20 bg-[#f08b57]/[0.04] px-4 py-3 font-mono text-xs text-[#f08b57]">
+                      {selectedPattern.sdk}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setSelectedPattern(null)}
+                    className="w-full rounded-full border paper-border py-2 text-[10px] uppercase tracking-[0.18em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors"
+                  >
+                    Clear selection
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <p className="text-sm leading-7 text-[#72695e]">
+                    Click any pattern node in the graph to see its host function signature, arguments, return type, and SDK equivalent.
+                  </p>
+                  <div className="mt-5 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[#72695e]">Total patterns</span>
+                      <span className="font-medium text-[#171412] tabular-nums">{PATTERNS.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[#72695e]">Handled</span>
+                      <span className="font-medium text-[#78875b] tabular-nums">{PATTERNS.filter((p) => p.status === 'handled').length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[#72695e]">Partial</span>
+                      <span className="font-medium text-[#c4a35a] tabular-nums">{PATTERNS.filter((p) => p.status === 'partial').length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[#72695e]">Categories</span>
+                      <span className="font-medium text-[#171412] tabular-nums">{PATTERN_CATEGORIES.length}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 text-[10px] uppercase tracking-[0.18em] text-[#a29a8d] mb-3">By category</div>
+                  {PATTERN_CATEGORIES.map((cat) => {
+                    const inCat = PATTERNS.filter((p) => p.category === cat);
+                    const handled = inCat.filter((p) => p.status === 'handled').length;
+                    return (
+                      <div key={cat} className="flex items-center justify-between border-b paper-border-soft py-2 text-xs">
+                        <span className="text-[#72695e]">{cat}</span>
+                        <span className="tabular-nums text-[#171412]">{handled}/{inCat.length}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </aside>
         </section>
@@ -277,92 +321,6 @@ const DocsCanvas = () => {
     </div>
   );
 };
-
-const HostPatternPanel = () => {
-  const [category, setCategory] = useState<string>('all');
-  const [search, setSearch] = useState('');
-
-  const filtered = PATTERNS.filter((p) => {
-    if (category !== 'all' && p.category !== category) return false;
-    if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.sdk.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
-
-  return (
-    <div className="paper-panel rounded-[30px] p-5">
-      <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">
-        Host function catalog ({PATTERNS.length} patterns)
-      </div>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        <button
-          onClick={() => setCategory('all')}
-          className={`rounded-full px-2.5 py-1 text-[9px] uppercase tracking-[0.14em] transition-colors ${
-            category === 'all' ? 'bg-[#171412] text-[#f8f3ea]' : 'bg-white/60 text-[#72695e] hover:text-[#171412]'
-          }`}
-        >
-          All
-        </button>
-        {PATTERN_CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setCategory(cat)}
-            className={`rounded-full px-2.5 py-1 text-[9px] uppercase tracking-[0.14em] transition-colors ${
-              category === cat ? 'bg-[#171412] text-[#f8f3ea]' : 'bg-white/60 text-[#72695e] hover:text-[#171412]'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search patterns..."
-        className="mt-3 w-full rounded-full border border-[#ddd4c8] bg-white/70 px-3 py-1.5 text-xs outline-none placeholder:text-[#b4ab9e] focus:border-[#f08b57]"
-      />
-      <div className="mt-3 max-h-[50vh] space-y-2.5 overflow-y-auto">
-        {filtered.map((pattern) => (
-          <div key={pattern.name} className="rounded-2xl border paper-border bg-white/58 px-4 py-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-medium text-[#171412]">{pattern.name}</div>
-                <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[#a29a8d]">
-                  {pattern.module} / {pattern.category}
-                </div>
-              </div>
-              <span
-                className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.14em] ${
-                  pattern.status === 'handled'
-                    ? 'bg-[#78875b]/10 text-[#78875b]'
-                    : pattern.status === 'partial'
-                      ? 'bg-[#c4a35a]/10 text-[#c4a35a]'
-                      : 'bg-[#87605b]/10 text-[#87605b]'
-                }`}
-              >
-                {pattern.status}
-              </span>
-            </div>
-            <div className="mt-2 text-[11px] text-[#8f8477]">
-              {pattern.args} → {pattern.returnType}
-            </div>
-            <div className="mt-2 text-xs leading-6 text-[#72695e]">
-              SDK: <code className="text-[#f08b57]">{pattern.sdk}</code>
-            </div>
-          </div>
-        ))}
-        {filtered.length === 0 && (
-          <div className="py-4 text-center text-xs text-[#a29a8d]">No patterns match</div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const Badge = ({ children }: { children: React.ReactNode }) => (
-  <span className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[11px] uppercase tracking-[0.2em] text-[#8f8477]">
-    {children}
-  </span>
-);
 
 const Docs = () => (
   <ReactFlowProvider>

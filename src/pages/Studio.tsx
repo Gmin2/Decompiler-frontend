@@ -149,7 +149,7 @@ const Studio = () => {
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 gap-5" style={{ gridTemplateColumns: leftOpen ? '260px minmax(0,1fr) 310px' : 'minmax(0,1fr) 310px' }}>
+        <div className="grid min-h-0 flex-1 gap-5" style={{ gridTemplateColumns: leftOpen ? '320px minmax(0,1fr) 310px' : 'minmax(0,1fr) 310px' }}>
           {leftOpen && (
             <aside className="paper-panel min-h-0 overflow-hidden rounded-[28px]">
               <div className="border-b paper-border px-5 py-4">
@@ -190,7 +190,7 @@ const Studio = () => {
             </div>
 
             <div className="h-[calc(100%-87px)] overflow-auto bg-[#fdfbf7]">
-              {activeTab === 'rust' && <CodeView code={rustSource || '// No contract loaded. Upload a .wasm or fetch by contract ID.'} />}
+              {activeTab === 'rust' && <CodeView code={rustSource || '// No contract loaded.\n// Upload a .wasm file, fetch by contract ID,\n// or pick one from the Gallery.'} />}
               {activeTab === 'host' && <HostCallsView imports={imp} />}
               {activeTab === 'spec' && <CodeView code={specJson ? JSON.stringify(specJson, null, 2) : '{}'} />}
               {activeTab === 'imports' && <CodeView code={importsJson ? JSON.stringify(importsJson, null, 2) : '{}'} />}
@@ -360,7 +360,9 @@ const TimelineGroup = ({
 }) => (
   <div className="relative pb-4">
     <div className={`mb-2 flex items-center gap-3 ${tone === 'active' ? 'text-[#171412]' : 'text-[#72695e]'}`}>
-      <span className={`absolute left-[-18px] h-2.5 w-2.5 rounded-full border ${tone === 'active' ? 'border-[#22c55e] bg-[#22c55e]' : 'border-[#d6cdc0] bg-[#f6f1e8]'}`} />
+      <span className={`absolute left-[-20px] flex h-4 w-4 items-center justify-center ${tone === 'active' ? 'text-[#22c55e]' : 'text-[#d6cdc0]'}`}>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l5 4-5 4V1z" /></svg>
+      </span>
       <h3 className="text-[1.05rem] font-semibold capitalize tracking-[-0.02em]">{title}</h3>
     </div>
     <div className="space-y-1">{children}</div>
@@ -390,10 +392,12 @@ const TimelineItem = ({
     }`}
   >
     <span
-      className={`absolute left-[-18px] top-[18px] h-1.5 w-1.5 rounded-full ${
-        tone === 'active' ? 'bg-[#22c55e]' : 'bg-[#d8d0c3]'
+      className={`absolute left-[-19px] top-[16px] flex h-3 w-3 items-center justify-center ${
+        tone === 'active' ? 'text-[#22c55e]' : 'text-[#d8d0c3]'
       }`}
-    />
+    >
+      <svg width="7" height="7" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l5 4-5 4V1z" /></svg>
+    </span>
     <div className="flex items-start justify-between gap-3 px-3">
       <div className="min-w-0">
         <div className={`text-[0.98rem] font-semibold tracking-[-0.02em] ${active ? 'text-[#171412]' : 'text-[#3f382f]'}`}>
@@ -412,15 +416,17 @@ const CodeView = ({ code }: { code: string }) => {
   const lines = code.split('\n');
 
   return (
-    <div className="py-3 font-mono text-[13px] leading-7">
-      {lines.map((line, index) => (
-        <div key={index} className="flex px-1 hover:bg-[#f08b57]/[0.04]">
-          <span className="w-12 shrink-0 select-none pl-4 pr-5 text-right text-xs tabular-nums text-[#c8bfb2] leading-7">
-            {index + 1}
-          </span>
-          <pre className="whitespace-pre text-[#544c43]">{highlightRust(line)}</pre>
-        </div>
-      ))}
+    <div className="overflow-x-auto py-3 font-mono text-[13px] leading-7">
+      <div className="min-w-fit">
+        {lines.map((line, index) => (
+          <div key={index} className="flex px-1 hover:bg-[#f08b57]/[0.04]">
+            <span className="w-12 shrink-0 select-none pl-4 pr-5 text-right text-xs tabular-nums text-[#c8bfb2] leading-7">
+              {index + 1}
+            </span>
+            <pre className="whitespace-pre text-[#544c43]">{highlightRust(line)}</pre>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

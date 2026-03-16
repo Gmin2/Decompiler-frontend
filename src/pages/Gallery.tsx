@@ -187,13 +187,13 @@ const GalleryCard = ({
           type="button"
           disabled={cardLoading}
           onClick={handleDecompile}
-          className="flex-1 rounded-full border py-1.5 text-center text-[10px] tracking-wider transition-colors paper-border paper-body hover:border-[#f08b57] hover:text-[#f08b57] disabled:opacity-50"
+          className="flex-1 rounded-full bg-[#171412] py-1.5 text-center text-[10px] tracking-wider text-[#f8f3ea] transition-colors hover:bg-[#f08b57] disabled:opacity-50"
         >
           {cardLoading ? 'LOADING...' : 'DECOMPILE'}
         </button>
         <button
           type="button"
-          onClick={() => navigate(`/studio?example=${contract.name}`)}
+          onClick={() => navigate(`/compare?example=${contract.name}`)}
           className="flex-1 rounded-full border py-1.5 text-center text-[10px] tracking-wider transition-colors paper-border paper-body hover:border-[#f08b57] hover:text-[#f08b57]"
         >
           COMPARE

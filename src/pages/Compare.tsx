@@ -1,5 +1,7 @@
-import { useState, useRef, type ChangeEvent } from 'react';
+import { useEffect, useState, useRef, type ChangeEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { scoreWasm, decompileWasm } from '../lib/wasm';
+import { CONTRACTS, formatName } from '../data/contracts';
 
 interface ScoreResult {
   overall: number;
@@ -9,46 +11,325 @@ interface ScoreResult {
   function_scores: { name: string; signature: number; body: number }[];
 }
 
-const statusTone = (same: boolean) =>
-  same ? 'bg-transparent' : 'bg-[#f08b57]/[0.08]';
+interface BatchEntry {
+  name: string;
+  score: ScoreResult | null;
+  original: string;
+  decompiled: string;
+  error?: string;
+}
+
+type Mode = 'batch' | 'single';
+
+const tierLabel = (pct: number) =>
+  pct >= 90 ? 'top' : pct >= 80 ? 'high' : pct >= 50 ? 'mid' : pct >= 30 ? 'low' : 'minimal';
+
+const tierColor = (pct: number) =>
+  pct >= 90 ? 'text-[#78875b]' : pct >= 80 ? 'text-[#c4a35a]' : pct >= 50 ? 'text-[#5b8087]' : 'text-[#87605b]';
 
 const scoreColor = (value: number) =>
   value >= 0.9 ? 'score-green' : value >= 0.8 ? 'score-yellow' : value >= 0.5 ? 'score-cyan' : 'score-red';
 
 const Compare = () => {
+  const [mode, setMode] = useState<Mode>('batch');
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('example')) setMode('single');
+  }, [searchParams]);
+
+  return (
+    <div className="px-[4vw] py-10">
+      <div className="mx-auto max-w-[1400px]">
+        <section className="paper-panel rounded-[34px] px-7 py-7">
+          <div className="flex items-start justify-between gap-8">
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.28em] text-[#a29a8d]">Accuracy benchmark</div>
+              <h1 className="mt-3 text-[clamp(2.4rem,5vw,4.2rem)] leading-[0.95] text-[#171412]">
+                {mode === 'batch' ? 'Benchmark all contracts' : 'Compare source and decompiled output'}
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-[#72695e]">
+                {mode === 'batch'
+                  ? 'Run the AST-based accuracy benchmark across all 19 bundled contracts. Decompiles each WASM, scores against original source, and produces a full report.'
+                  : 'Select a bundled contract or upload files, then run the AST-based accuracy benchmark.'}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                onClick={() => setMode('batch')}
+                className={`rounded-full px-4 py-2 text-[10px] uppercase tracking-[0.22em] transition-colors ${
+                  mode === 'batch' ? 'bg-[#171412] text-[#f8f3ea]' : 'border paper-border bg-white/70 text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57]'
+                }`}
+              >
+                Benchmark all
+              </button>
+              <button
+                onClick={() => setMode('single')}
+                className={`rounded-full px-4 py-2 text-[10px] uppercase tracking-[0.22em] transition-colors ${
+                  mode === 'single' ? 'bg-[#171412] text-[#f8f3ea]' : 'border paper-border bg-white/70 text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57]'
+                }`}
+              >
+                Compare one
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {mode === 'batch' ? <BatchBenchmark /> : <SingleCompare />}
+      </div>
+    </div>
+  );
+};
+
+const BatchBenchmark = () => {
+  const [results, setResults] = useState<BatchEntry[]>([]);
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const runBenchmark = async () => {
+    setRunning(true);
+    setResults([]);
+    setProgress(0);
+    const entries: BatchEntry[] = [];
+
+    for (let i = 0; i < CONTRACTS.length; i++) {
+      const c = CONTRACTS[i];
+      setProgress(i + 1);
+      try {
+        const [origResp, wasmResp] = await Promise.all([
+          fetch(`/contracts/original/${c.name}.rs`),
+          fetch(`/contracts/${c.name}.wasm`),
+        ]);
+        if (!origResp.ok || !wasmResp.ok) {
+          entries.push({ name: c.name, score: null, original: '', decompiled: '', error: 'Failed to load files' });
+          continue;
+        }
+        const original = await origResp.text();
+        const bytes = new Uint8Array(await wasmResp.arrayBuffer());
+        const decompiled = await decompileWasm(bytes);
+        const score = await scoreWasm(original, decompiled);
+        entries.push({ name: c.name, score, original, decompiled });
+      } catch (e) {
+        entries.push({ name: c.name, score: null, original: '', decompiled: '', error: String(e) });
+      }
+      setResults([...entries]);
+    }
+    setRunning(false);
+  };
+
+  const scored = results.filter((r) => r.score);
+  const avgOverall = scored.length ? scored.reduce((s, r) => s + (r.score?.overall ?? 0), 0) / scored.length : 0;
+  const avgTypes = scored.length ? scored.reduce((s, r) => s + (r.score?.types ?? 0), 0) / scored.length : 0;
+  const avgSigs = scored.length ? scored.reduce((s, r) => s + (r.score?.signatures ?? 0), 0) / scored.length : 0;
+  const avgBodies = scored.length ? scored.reduce((s, r) => s + (r.score?.bodies ?? 0), 0) / scored.length : 0;
+  const above90 = scored.filter((r) => (r.score?.overall ?? 0) >= 0.9).length;
+  const above80 = scored.filter((r) => (r.score?.overall ?? 0) >= 0.8).length;
+  const above50 = scored.filter((r) => (r.score?.overall ?? 0) >= 0.5).length;
+
+  const sorted = [...results].sort((a, b) => (b.score?.overall ?? 0) - (a.score?.overall ?? 0));
+
+  return (
+    <section className="mt-6 space-y-6">
+      <div className="paper-panel rounded-[30px] p-6">
+        <div className="flex items-center justify-between gap-6">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Full suite benchmark</div>
+            <div className="mt-2 text-lg text-[#171412]">
+              {running
+                ? `Scoring contract ${progress} of ${CONTRACTS.length}...`
+                : results.length > 0
+                  ? `${scored.length} contracts scored`
+                  : `${CONTRACTS.length} contracts ready`}
+            </div>
+          </div>
+          <button
+            onClick={runBenchmark}
+            disabled={running}
+            className="rounded-full bg-[#171412] px-6 py-2.5 text-[10px] uppercase tracking-[0.22em] text-[#f8f3ea] hover:bg-[#f08b57] transition-colors disabled:opacity-50"
+          >
+            {running ? `${progress}/${CONTRACTS.length}` : results.length > 0 ? 'Re-run' : 'Run benchmark'}
+          </button>
+        </div>
+        {running && (
+          <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-[#e8dfd3]">
+            <div className="h-full bg-[#f08b57] transition-all duration-300" style={{ width: `${(progress / CONTRACTS.length) * 100}%` }} />
+          </div>
+        )}
+      </div>
+
+      {scored.length > 0 && (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="space-y-6">
+            <div className="paper-panel rounded-[30px] p-6">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Results</div>
+              <div className="mt-4 space-y-2">
+                {sorted.map((entry) => {
+                  const pct = (entry.score?.overall ?? 0) * 100;
+                  const isExpanded = expanded === entry.name;
+                  return (
+                    <div key={entry.name}>
+                      <button
+                        type="button"
+                        onClick={() => setExpanded(isExpanded ? null : entry.name)}
+                        className="flex w-full items-center gap-4 rounded-2xl border paper-border bg-white/60 px-4 py-3 text-left transition-colors hover:bg-white/80"
+                      >
+                        <span className={`w-14 text-right text-sm font-medium tabular-nums ${tierColor(pct)}`}>{pct.toFixed(1)}%</span>
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#e8dfd3]">
+                          <div className={`h-full rounded-full ${scoreColor(entry.score?.overall ?? 0)}`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="w-40 truncate text-sm text-[#171412]">{formatName(entry.name)}</span>
+                        <span className={`text-[10px] uppercase tracking-[0.14em] ${tierColor(pct)}`}>{tierLabel(pct)}</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                          className={`shrink-0 text-[#a29a8d] transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </button>
+
+                      {isExpanded && entry.score && (
+                        <div className="mt-3 mb-3 space-y-4 pl-4 border-l-2 border-[#e8dfd3] ml-6">
+                          <div className="grid grid-cols-3 gap-3">
+                            <MiniScore label="Types" value={entry.score.types} />
+                            <MiniScore label="Signatures" value={entry.score.signatures} />
+                            <MiniScore label="Bodies" value={entry.score.bodies} />
+                          </div>
+                          {entry.score.function_scores.length > 0 && (
+                            <div className="rounded-2xl border paper-border bg-white/50 px-4 py-3">
+                              <div className="text-[10px] uppercase tracking-[0.18em] text-[#a29a8d] mb-2">Functions</div>
+                              {entry.score.function_scores.map((fn) => (
+                                <div key={fn.name} className="flex items-center justify-between py-1 text-xs">
+                                  <span className="font-medium text-[#171412]">{fn.name}</span>
+                                  <div className="flex gap-4 tabular-nums">
+                                    <span className="text-[#8f8477]">sig {(fn.signature * 100).toFixed(0)}%</span>
+                                    <span className="text-[#8f8477]">body {(fn.body * 100).toFixed(0)}%</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div className="grid gap-4 xl:grid-cols-2">
+                            <CodeBlock label="Original" code={entry.original} />
+                            <CodeBlock label="Decompiled" code={entry.decompiled} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <aside className="space-y-6">
+            <div className="paper-panel rounded-[30px] p-5">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Summary</div>
+              <div className="mt-4">
+                <div className="text-3xl font-medium text-[#171412] tabular-nums">{(avgOverall * 100).toFixed(1)}%</div>
+                <div className="mt-1 text-xs text-[#8f8477]">average across {scored.length} contracts</div>
+              </div>
+              <div className="mt-5">
+                <ScoreBar value={avgTypes} label="Types" weight="20%" />
+                <ScoreBar value={avgSigs} label="Signatures" weight="20%" />
+                <ScoreBar value={avgBodies} label="Bodies" weight="60%" />
+              </div>
+            </div>
+            <div className="paper-panel rounded-[30px] p-5">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Thresholds</div>
+              <div className="mt-4 space-y-3">
+                <ThresholdRow label="90%+" count={above90} total={scored.length} />
+                <ThresholdRow label="80%+" count={above80} total={scored.length} />
+                <ThresholdRow label="50%+" count={above50} total={scored.length} />
+              </div>
+            </div>
+            <div className="paper-panel rounded-[30px] p-5">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Tier breakdown</div>
+              <div className="mt-4 space-y-3">
+                {['top', 'high', 'mid', 'low', 'minimal'].map((tier) => {
+                  const inTier = sorted.filter((r) => tierLabel((r.score?.overall ?? 0) * 100) === tier);
+                  if (!inTier.length) return null;
+                  return (
+                    <div key={tier}>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="uppercase tracking-[0.14em] text-[#a29a8d]">{tier}</span>
+                        <span className="text-[#171412] tabular-nums">{inTier.length}</span>
+                      </div>
+                      <div className="mt-1 text-[11px] text-[#8f8477]">{inTier.map((r) => formatName(r.name)).join(', ')}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+    </section>
+  );
+};
+
+const SingleCompare = () => {
   const [originalText, setOriginalText] = useState('');
   const [decompiledText, setDecompiledText] = useState('');
   const [scoreResult, setScoreResult] = useState<ScoreResult | null>(null);
   const [scoring, setScoring] = useState(false);
   const [decompiling, setDecompiling] = useState(false);
+  const [loadingExample, setLoadingExample] = useState(false);
+  const [selectedExample, setSelectedExample] = useState('');
   const wasmInputRef = useRef<HTMLInputElement>(null);
+  const [searchParams] = useSearchParams();
 
-  const handleOriginalFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  useEffect(() => {
+    const example = searchParams.get('example');
+    if (example && !originalText && !decompiledText) {
+      setSelectedExample(example);
+      loadExample(example);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadExample = async (name: string) => {
+    setLoadingExample(true);
+    setScoreResult(null);
+    try {
+      const [origResp, wasmResp] = await Promise.all([
+        fetch(`/contracts/original/${name}.rs`),
+        fetch(`/contracts/${name}.wasm`),
+      ]);
+      if (origResp.ok) setOriginalText(await origResp.text());
+      if (wasmResp.ok) {
+        const bytes = new Uint8Array(await wasmResp.arrayBuffer());
+        setDecompiledText(await decompileWasm(bytes));
+      }
+    } catch (e) {
+      console.error('Failed to load example:', e);
+    } finally {
+      setLoadingExample(false);
+    }
+  };
+
+  const handleOriginalFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => setOriginalText(reader.result as string);
     reader.readAsText(file);
   };
 
-  const handleDecompiledFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleDecompiledFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => setDecompiledText(reader.result as string);
     reader.readAsText(file);
   };
 
-  const handleWasmFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleWasmFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     setDecompiling(true);
     try {
-      const buffer = await file.arrayBuffer();
-      const source = await decompileWasm(new Uint8Array(buffer));
-      setDecompiledText(source);
-    } catch (e) {
-      setDecompiledText(`// Decompilation error: ${e instanceof Error ? e.message : e}`);
+      const buf = await file.arrayBuffer();
+      setDecompiledText(await decompileWasm(new Uint8Array(buf)));
+    } catch (err) {
+      setDecompiledText(`// Error: ${err instanceof Error ? err.message : err}`);
     } finally {
       setDecompiling(false);
     }
@@ -57,131 +338,65 @@ const Compare = () => {
   const runComparison = async () => {
     if (!originalText || !decompiledText) return;
     setScoring(true);
-    try {
-      const result = await scoreWasm(originalText, decompiledText);
-      setScoreResult(result);
-    } catch (e) {
-      console.error('Scoring failed:', e);
-    } finally {
-      setScoring(false);
-    }
+    try { setScoreResult(await scoreWasm(originalText, decompiledText)); }
+    catch (e) { console.error('Scoring failed:', e); }
+    finally { setScoring(false); }
   };
 
-  const originalLines = originalText.split('\n');
-  const decompiledLines = decompiledText.split('\n');
-  const totalLines = Math.max(originalLines.length, decompiledLines.length);
-  const changedCount = Array.from({ length: totalLines }).filter((_, index) => (
-    (originalLines[index] ?? '') !== (decompiledLines[index] ?? '')
-  )).length;
-
   return (
-    <div className="px-[4vw] py-10">
-      <div className="mx-auto max-w-[1400px]">
-        <section className="paper-panel rounded-[34px] px-7 py-7">
-          <div className="flex items-start justify-between gap-8">
+    <section className="mt-6 space-y-6">
+      <div className="paper-panel rounded-[30px] p-6">
+        <div className="flex items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
             <div>
-              <div className="text-[10px] uppercase tracking-[0.28em] text-[#a29a8d]">Review workspace</div>
-              <h1 className="mt-3 text-[clamp(2.4rem,5vw,4.2rem)] leading-[0.95] text-[#171412]">
-                Compare source and decompiled output
-              </h1>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-[#72695e]">
-                Upload original Rust source and decompiled output (or a .wasm to decompile), then run the AST-based accuracy benchmark.
-              </p>
+              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Example contract</div>
+              <select
+                value={selectedExample}
+                onChange={(e) => { setSelectedExample(e.target.value); if (e.target.value) loadExample(e.target.value); }}
+                className="mt-2 rounded-full border border-[#ddd4c8] bg-white/78 px-4 py-2 text-sm text-[#171412] outline-none focus:border-[#f08b57]"
+              >
+                <option value="">Select a contract...</option>
+                {CONTRACTS.map((c) => <option key={c.name} value={c.name}>{formatName(c.name)}</option>)}
+              </select>
             </div>
+            {loadingExample && <span className="rounded-full border border-[#f08b57] bg-[#f08b57]/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[#f08b57]">Loading...</span>}
+          </div>
+          <div className="flex gap-3">
+            <button onClick={() => { setOriginalText(''); setDecompiledText(''); setScoreResult(null); setSelectedExample(''); }}
+              className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors">Clear</button>
+            <button onClick={runComparison} disabled={scoring || !originalText || !decompiledText}
+              className="rounded-full bg-[#171412] px-5 py-2 text-[10px] uppercase tracking-[0.22em] text-[#f8f3ea] hover:bg-[#f08b57] transition-colors disabled:opacity-50">
+              {scoring ? 'Scoring...' : 'Run compare'}</button>
+          </div>
+        </div>
+      </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              <button
-                onClick={() => {
-                  setOriginalText('');
-                  setDecompiledText('');
-                  setScoreResult(null);
-                }}
-                className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors"
-              >
-                Clear
-              </button>
-              <button
-                onClick={runComparison}
-                disabled={scoring || !originalText || !decompiledText}
-                className="rounded-full bg-[#171412] px-5 py-2 text-[10px] uppercase tracking-[0.22em] text-[#f8f3ea] hover:bg-[#f08b57] transition-colors disabled:opacity-50"
-              >
-                {scoring ? 'Scoring...' : 'Run compare'}
-              </button>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <UploadCard title="Original source" subtitle="Upload .rs" onChange={handleOriginalFile} hasContent={!!originalText} />
+        <div className="paper-panel rounded-[28px] p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Decompiled output</div>
+              <div className="mt-2 text-sm text-[#72695e]">{decompiledText ? `${decompiledText.split('\n').length} lines` : 'Upload .rs or .wasm'}</div>
+            </div>
+            <div className="flex gap-2">
+              <label className="cursor-pointer rounded-full border paper-border bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors">
+                .rs <input type="file" accept=".rs" onChange={handleDecompiledFile} className="hidden" />
+              </label>
+              <button onClick={() => wasmInputRef.current?.click()} disabled={decompiling}
+                className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors disabled:opacity-50">
+                {decompiling ? 'Working...' : '.wasm'}</button>
+              <input ref={wasmInputRef} type="file" accept=".wasm" onChange={handleWasmFile} className="hidden" />
             </div>
           </div>
+        </div>
+      </div>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            {originalText && decompiledText && (
-              <span className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[11px] uppercase tracking-[0.2em] text-[#8f8477]">
-                {changedCount} changed lines
-              </span>
-            )}
-            {scoreResult && (
-              <span className="rounded-full border border-[#78875b] bg-[#78875b]/10 px-4 py-2 text-[11px] uppercase tracking-[0.2em] text-[#78875b]">
-                {Math.round(scoreResult.overall * 100)}% overall accuracy
-              </span>
-            )}
-          </div>
-        </section>
-
-        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <div className="space-y-6">
-            <div className="grid gap-6 xl:grid-cols-2">
-              <UploadCard
-                title="Original source"
-                subtitle="Expected Rust implementation"
-                accept=".rs"
-                onChange={handleOriginalFile}
-              />
-              <div className="paper-panel rounded-[28px] p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Decompiled output</div>
-                    <div className="mt-2 text-sm text-[#72695e]">Upload .rs or decompile from .wasm</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <label className="cursor-pointer rounded-full border paper-border bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors">
-                      Upload .rs
-                      <input type="file" accept=".rs" onChange={handleDecompiledFile} className="hidden" />
-                    </label>
-                    <button
-                      onClick={() => wasmInputRef.current?.click()}
-                      disabled={decompiling}
-                      className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors disabled:opacity-50"
-                    >
-                      {decompiling ? 'Decompiling...' : 'From .wasm'}
-                    </button>
-                    <input ref={wasmInputRef} type="file" accept=".wasm" onChange={handleWasmFile} className="hidden" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {(originalText || decompiledText) && (
-              <div className="paper-panel overflow-hidden rounded-[32px]">
-                <div className="border-b paper-border px-5 py-4">
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                      <div className="text-[10px] uppercase tracking-[0.24em] text-[#a29a8d]">diff review</div>
-                      <div className="mt-2 text-lg text-[#171412]">Side-by-side comparison</div>
-                    </div>
-                    <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.18em]">
-                      <span className="rounded-full bg-[#78875b]/10 px-3 py-1 text-[#78875b]">
-                        {totalLines - changedCount} stable
-                      </span>
-                      <span className="rounded-full bg-[#f08b57]/10 px-3 py-1 text-[#f08b57]">
-                        {changedCount} changed
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid xl:grid-cols-2">
-                  <DiffColumn title="Original" lines={originalLines} otherLines={decompiledLines} />
-                  <DiffColumn title="Decompiled" lines={decompiledLines} otherLines={originalLines} />
-                </div>
-              </div>
-            )}
+      {(originalText || decompiledText) && (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="grid gap-4 xl:grid-cols-2">
+            <CodeBlock label="Original" code={originalText} />
+            <CodeBlock label="Decompiled" code={decompiledText} />
           </div>
 
           <aside className="space-y-6">
@@ -196,29 +411,19 @@ const Compare = () => {
                   <ScoreBar value={scoreResult.bodies} label="Bodies" weight="60%" />
                 </div>
               ) : (
-                <p className="mt-4 text-sm text-[#8f8477]">Upload both files and click "Run compare" to score accuracy using the AST benchmark.</p>
+                <p className="mt-4 text-sm text-[#8f8477]">Click "Run compare" to score.</p>
               )}
             </div>
-
             {scoreResult && scoreResult.function_scores.length > 0 && (
               <div className="paper-panel rounded-[30px] p-5">
                 <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Per-function</div>
                 <div className="mt-4 space-y-3">
-                  {scoreResult.function_scores.map((item) => (
-                    <div key={item.name} className="rounded-2xl border paper-border bg-white/60 px-4 py-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-[#171412]">{item.name}</span>
-                        <span className="text-[10px] uppercase tracking-[0.18em] text-[#8f8477]">function</span>
-                      </div>
-                      <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <div className="text-[#a29a8d]">Signature</div>
-                          <div className="mt-1 font-medium text-[#171412]">{(item.signature * 100).toFixed(0)}%</div>
-                        </div>
-                        <div>
-                          <div className="text-[#a29a8d]">Body</div>
-                          <div className="mt-1 font-medium text-[#171412]">{(item.body * 100).toFixed(0)}%</div>
-                        </div>
+                  {scoreResult.function_scores.map((fn) => (
+                    <div key={fn.name} className="rounded-2xl border paper-border bg-white/60 px-4 py-3">
+                      <div className="font-medium text-[#171412]">{fn.name}</div>
+                      <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
+                        <div><span className="text-[#a29a8d]">sig</span> <span className="font-medium text-[#171412] tabular-nums">{(fn.signature * 100).toFixed(0)}%</span></div>
+                        <div><span className="text-[#a29a8d]">body</span> <span className="font-medium text-[#171412] tabular-nums">{(fn.body * 100).toFixed(0)}%</span></div>
                       </div>
                     </div>
                   ))}
@@ -226,32 +431,60 @@ const Compare = () => {
               </div>
             )}
           </aside>
-        </section>
+        </div>
+      )}
+    </section>
+  );
+};
+
+const CodeBlock = ({ label, code }: { label: string; code: string }) => {
+  const lines = code.split('\n');
+  return (
+    <div className="paper-panel overflow-hidden rounded-[24px]">
+      <div className="border-b paper-border px-4 py-3 text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">
+        {label}
+        <span className="ml-3 text-[#c8bfb2]">{lines.length} lines</span>
+      </div>
+      <div className="max-h-[500px] overflow-auto bg-[#fdfbf7] py-2 font-mono text-[12px] leading-6">
+        {lines.map((line, i) => (
+          <div key={i} className="flex px-1 hover:bg-[#f08b57]/[0.03]">
+            <span className="w-10 shrink-0 select-none pr-3 text-right text-[10px] tabular-nums text-[#c8bfb2] leading-6">{i + 1}</span>
+            <pre className="whitespace-pre text-[#544c43]">{line || ' '}</pre>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
-const UploadCard = ({
-  title,
-  subtitle,
-  accept,
-  onChange,
-}: {
-  title: string;
-  subtitle: string;
-  accept: string;
-  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+const MiniScore = ({ label, value }: { label: string; value: number }) => (
+  <div className="rounded-xl border paper-border bg-white/50 px-3 py-2 text-center">
+    <div className="text-[10px] uppercase tracking-[0.14em] text-[#a29a8d]">{label}</div>
+    <div className="mt-1 text-sm font-medium text-[#171412] tabular-nums">{(value * 100).toFixed(0)}%</div>
+  </div>
+);
+
+const ThresholdRow = ({ label, count, total }: { label: string; count: number; total: number }) => (
+  <div className="flex items-center justify-between">
+    <span className="text-xs text-[#72695e]">{label}</span>
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-medium text-[#171412] tabular-nums">{count}</span>
+      <span className="text-[10px] text-[#a29a8d]">/ {total}</span>
+    </div>
+  </div>
+);
+
+const UploadCard = ({ title, subtitle, onChange, hasContent }: {
+  title: string; subtitle: string; onChange: (e: ChangeEvent<HTMLInputElement>) => void; hasContent?: boolean;
 }) => (
   <div className="paper-panel rounded-[28px] p-5">
     <div className="flex items-start justify-between gap-4">
       <div>
         <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">{title}</div>
-        <div className="mt-2 text-sm text-[#72695e]">{subtitle}</div>
+        <div className="mt-2 text-sm text-[#72695e]">{hasContent ? 'File loaded' : subtitle}</div>
       </div>
       <label className="cursor-pointer rounded-full border paper-border bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors">
-        Upload {accept}
-        <input type="file" accept={accept} onChange={onChange} className="hidden" />
+        Upload .rs <input type="file" accept=".rs" onChange={onChange} className="hidden" />
       </label>
     </div>
   </div>
@@ -271,43 +504,5 @@ const ScoreBar = ({ value, label, weight }: { value: number; label: string; weig
     </div>
   </div>
 );
-
-const DiffColumn = ({
-  title,
-  lines,
-  otherLines,
-}: {
-  title: string;
-  lines: string[];
-  otherLines: string[];
-}) => {
-  const total = Math.max(lines.length, otherLines.length);
-
-  return (
-    <div className="min-w-0 border-r paper-border last:border-r-0">
-      <div className="border-b paper-border bg-white/45 px-4 py-3 text-[11px] uppercase tracking-[0.18em] text-[#8f8477]">
-        {title}
-      </div>
-      <div className="max-h-[62vh] overflow-auto font-mono text-[13px] leading-7">
-        {Array.from({ length: total }).map((_, index) => {
-          const line = lines[index] ?? '';
-          const other = otherLines[index] ?? '';
-          const same = line === other;
-
-          return (
-            <div key={index} className={`flex border-b paper-border-soft px-1 ${statusTone(same)}`}>
-              <span className="w-12 shrink-0 select-none pl-4 pr-4 text-right text-xs tabular-nums text-[#c8bfb2] leading-7">
-                {index + 1}
-              </span>
-              <pre className="min-w-0 whitespace-pre-wrap break-words py-1 text-[#544c43]">
-                {line || ' '}
-              </pre>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
 
 export default Compare;
