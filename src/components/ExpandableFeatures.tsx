@@ -40,8 +40,8 @@ const deviceGroups = [
 
 const StripesPattern = ({ id }: { id: string }) => (
   <pattern id={id} patternUnits="userSpaceOnUse" width="6" height="4" patternTransform="rotate(0)">
-    <rect width="6" height="4" fill="var(--color-bg, #f4efe6)" />
-    <rect x="3" width="1" height="5" fill="var(--color-border, #d6cfbf)" />
+    <rect width="6" height="4" fill="#ece5d9" />
+    <rect x="3" width="1" height="5" fill="#b5a995" />
   </pattern>
 );
 
@@ -51,7 +51,7 @@ const SceneIllustration = ({ activeDevice }: { activeDevice: number | null }) =>
     const isActive = activeDevice === index;
     const hasSelection = activeDevice !== null;
     return {
-      opacity: hasSelection ? (isActive ? 1 : 0.25) : 1,
+      opacity: hasSelection ? (isActive ? 1 : 0.4) : 1,
       transform: isActive ? 'scale(1.1)' : 'scale(1)',
       transformOrigin: `${cx}px ${cy}px`,
       transition: 'opacity 0.5s ease, transform 0.5s ease',
@@ -63,12 +63,12 @@ const SceneIllustration = ({ activeDevice }: { activeDevice: number | null }) =>
     transition: 'opacity 0.5s ease',
   } as React.CSSProperties;
 
-  // Colors that match the landing page theme
-  const bg = '#f4efe6';
-  const border = '#d6cfbf';
-  const borderStrong = 'rgba(47,42,36,0.35)';
+  // Darker colors so the illustration is visible
+  const bg = '#ece5d9';
+  const border = '#b5a995';
+  const borderStrong = 'rgba(47,42,36,0.55)';
   const primary = '#f08b57';
-  const muted = '#e8e2d8';
+  const muted = '#d8d0c4';
 
   return (
     <svg viewBox="0 0 520 440" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto max-w-md lg:max-w-lg">
@@ -105,8 +105,8 @@ const SceneIllustration = ({ activeDevice }: { activeDevice: number | null }) =>
         <path d="M310 180H245V208L245.02 208C245.02 213 251.5 216.5 264 224C276.5 231 283 234.5 291 234.5C299 234.5 305.5 231 318 224C330 216.5 336.5 213 336.5 208V180H310Z" fill="url(#sceneStripes)" stroke={borderStrong} />
         <path d="M264 162C276.5 155 283 151.5 291 151.5C299 151.5 305.5 155 318 162C330 169 336.5 172.5 336.5 177C336.5 181.5 330 185 318 192C305.5 199 299 202.5 291 202.5C283 202.5 276.5 199 264 192C251.5 185 245 181.5 245 177C245 172.5 251.5 169 264 162Z" fill={bg} stroke={borderStrong} />
         {/* Gear icon */}
-        <path d="M283 174 L291 168 L299 174 L296 182 L286 182 Z" fill="none" stroke={activeDevice === 1 ? primary : '#a39a8f'} strokeWidth="1.5" style={{ transition: 'stroke 0.3s' }} />
-        <circle cx="291" cy="176" r="3.5" fill="none" stroke={activeDevice === 1 ? primary : '#a39a8f'} strokeWidth="1" style={{ transition: 'stroke 0.3s' }} />
+        <path d="M283 174 L291 168 L299 174 L296 182 L286 182 Z" fill="none" stroke={activeDevice === 1 ? primary : '#7b7168'} strokeWidth="1.5" style={{ transition: 'stroke 0.3s' }} />
+        <circle cx="291" cy="176" r="3.5" fill="none" stroke={activeDevice === 1 ? primary : '#7b7168'} strokeWidth="1" style={{ transition: 'stroke 0.3s' }} />
       </g>
 
       {/* Device 2: Type System (isometric box, right) */}
@@ -115,7 +115,7 @@ const SceneIllustration = ({ activeDevice }: { activeDevice: number | null }) =>
         <path d="M400 260L445 235V260L400 285V260Z" fill="url(#sceneStripes)" stroke={borderStrong} />
         <path d="M400 210L445 235L400 260L355 235L400 210Z" fill={bg} stroke={borderStrong} />
         {/* Struct brackets */}
-        <text x="378" y="248" fill={activeDevice === 2 ? primary : '#a39a8f'} fontSize="9" fontFamily="monospace" style={{ transition: 'fill 0.3s' }}>{'{ }'}</text>
+        <text x="378" y="248" fill={activeDevice === 2 ? primary : '#7b7168'} fontSize="9" fontFamily="monospace" style={{ transition: 'fill 0.3s' }}>{'{ }'}</text>
         {/* Status dots */}
         <circle cx="362" cy="253" r="2.5" fill={activeDevice === 2 ? primary : border} style={{ transition: 'fill 0.3s' }} />
         <circle cx="369" cy="257" r="2.5" fill={activeDevice === 2 ? '#78875b' : border} style={{ transition: 'fill 0.3s' }} />
@@ -137,7 +137,7 @@ const SceneIllustration = ({ activeDevice }: { activeDevice: number | null }) =>
         <path d="M213 364C215 363 218 363 220 364L253 383C255 384 255 386 253 387L187 425C185 426 182 426 180 425L147 406C145 405 145 403 147 402L213 364Z" fill={bg} stroke={border} />
         <path d="M215 369C216 368 218 368 219 369L244 383C245 384 245 385 244 386L196 414C195 415 193 415 191 414L167 400C166 399 166 398 167 397L215 369Z" fill={muted} stroke={border} />
         {/* fn text */}
-        <text x="192" y="396" fill={activeDevice === 3 ? primary : '#a39a8f'} fontSize="8" fontFamily="monospace" style={{ transition: 'fill 0.3s' }}>fn()</text>
+        <text x="192" y="396" fill={activeDevice === 3 ? primary : '#7b7168'} fontSize="8" fontFamily="monospace" style={{ transition: 'fill 0.3s' }}>fn()</text>
       </g>
     </svg>
   );
@@ -201,7 +201,7 @@ const ExpandableFeatures = () => {
               )}
             </AnimatePresence>
 
-            <div className="space-y-2 max-lg:px-16 max-sm:px-9">
+            <div className="space-y-2 max-lg:px-8 max-sm:px-2">
               <LayoutGroup>
                 {features.map((feature, index) => {
                   const isActive = expandedIndex === index;
@@ -226,7 +226,7 @@ const ExpandableFeatures = () => {
                       className={`group relative min-w-0 max-w-xs overflow-hidden rounded-3xl text-left ring-1 transition-colors duration-500 max-md:mx-auto ${
                         isActive
                           ? 'w-full bg-[rgba(255,252,247,0.88)] shadow-md shadow-black/5 ring-[#d1c5b4]'
-                          : 'ring-transparent text-[#92887b] hover:text-[#5d5549]'
+                          : 'ring-transparent text-[#6b6156] hover:text-[#3a342c]'
                       }`}
                     >
                       {isActive && (
