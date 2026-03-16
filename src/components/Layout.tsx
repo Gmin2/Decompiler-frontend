@@ -15,46 +15,23 @@ const Layout = () => {
 
   return (
     <div className={`${isStudio ? 'h-screen overflow-hidden' : 'min-h-screen'} bg-[#f4efe6] text-[#5a5c54] font-mono selection:bg-[#ff8c00] selection:text-white`}>
-      <div className={`page-grid-shell ${isLanding ? 'page-grid-shell--landing' : ''}`} aria-hidden="true">
-        <div className="page-grid-shell__border" />
-        <div className="page-grid-shell__v page-grid-shell__v--left" />
-        <div className="page-grid-shell__v page-grid-shell__v--mid" />
-        <div className="page-grid-shell__v page-grid-shell__v--right" />
-        <div className="page-grid-shell__h page-grid-shell__h--top" />
-        <div className="page-grid-shell__h page-grid-shell__h--mid" />
-        <div className="page-grid-shell__h page-grid-shell__h--bottom" />
-      </div>
-
-      {!isLanding && (
-        <>
-          {/* ═══ Frame: two parallel lines with hatching between them ═══ */}
-
-          {/* Left: outer line at 2vw, hatched strip, inner line at 5vw */}
-          <div className="fixed top-0 left-[2vw] w-px h-full bg-[#ddd4c8] z-[2]" />
-          <div className="fixed top-0 left-[2vw] w-[3vw] h-full hatch-fill z-[1]" />
-          <div className="fixed top-0 left-[5vw] w-px h-full bg-[#ddd4c8] z-[2]" />
-
-          {/* Right: inner line at 95vw, hatched strip, outer line at 98vw */}
-          <div className="fixed top-0 right-[2vw] w-px h-full bg-[#ddd4c8] z-[2]" />
-          <div className="fixed top-0 right-[2vw] w-[3vw] h-full hatch-fill z-[1]" />
-          <div className="fixed top-0 right-[5vw] w-px h-full bg-[#ddd4c8] z-[2]" />
-
-          {/* Bottom: two horizontal lines with hatching between */}
-          <div className="fixed bottom-[4vh] left-0 w-full h-px bg-[#ddd4c8] z-[2]" />
-          <div className="fixed bottom-0 left-0 w-full h-[4vh] hatch-fill z-[1]" />
-          <div className="fixed bottom-0 left-0 w-full h-px bg-[#ddd4c8] z-[2]" />
-
-          {/* Orange crop marks */}
-          <div className="fixed top-1/2 -translate-y-1/2 left-0 w-2 h-6 bg-[#ff8c00] z-10" />
-          <div className="fixed bottom-[12vh] right-0 w-5 h-2 bg-[#ff8c00] z-10" />
-        </>
+      {/* Grid shell + hatching only on landing */}
+      {isLanding && (
+        <div className="page-grid-shell page-grid-shell--landing" aria-hidden="true">
+          <div className="page-grid-shell__border" />
+          <div className="page-grid-shell__v page-grid-shell__v--left" />
+          <div className="page-grid-shell__v page-grid-shell__v--mid" />
+          <div className="page-grid-shell__v page-grid-shell__v--right" />
+          <div className="page-grid-shell__h page-grid-shell__h--top" />
+          <div className="page-grid-shell__h page-grid-shell__h--mid" />
+          <div className="page-grid-shell__h page-grid-shell__h--bottom" />
+        </div>
       )}
 
-      {/* ═══ Content area (between the inner lines) ═══ */}
-      <div className={isLanding ? 'relative z-[1] min-h-screen' : 'relative z-[1] ml-[5vw] mr-[5vw] mb-[4vh]'}>
+      <div className={isLanding ? 'relative z-[1] min-h-screen' : 'relative z-[1]'}>
 
         {/* Navigation */}
-        <nav className={`flex items-center justify-between relative z-[5] ${isLanding ? 'px-6 py-5 sm:px-10 lg:px-16' : 'px-[5vw] py-5'}`}>
+        <nav className={`flex items-center justify-between relative z-[5] ${isLanding ? 'px-6 py-5 sm:px-10 lg:px-16' : 'px-6 py-5 sm:px-10'}`}>
           <NavLink to="/" className="flex items-baseline gap-1.5 group">
             <span className="text-[#171412] text-2xl font-bold tracking-[-0.03em] group-hover:text-[#f08b57] transition-colors" style={{ fontFamily: "'Playfair Display', serif" }}>
               Soroban
@@ -90,8 +67,7 @@ const Layout = () => {
           </div>
         </nav>
 
-        <div className="h-px bg-[#c8bfb2]" />
-        {!isLanding && <div className="border-b border-[#c8bfb2] h-3 hatch-fill" />}
+        <div className="h-px bg-[#ddd4c8]" />
 
         {/* Page content */}
         <main className={`relative ${isStudio ? 'h-[calc(100vh-57px)] overflow-hidden' : ''}`}>
@@ -101,12 +77,12 @@ const Layout = () => {
         {/* Footer */}
         {!isStudio && !isLanding && (
           <>
-            <div className="border-y border-[#ddd4c8] h-3 hatch-fill" />
-            <footer className="px-[5vw] py-6 flex items-center justify-between">
+            <div className="h-px bg-[#ddd4c8]" />
+            <footer className="px-6 sm:px-10 py-6 flex items-center justify-between">
               <span className="text-xs tracking-[0.15em] text-[#8d8478]">2026 {">>>"}</span>
               <div className="flex items-center gap-3">
                 <Diamond />
-                <span className="text-xs tracking-[0.15em] text-[#8d8478]">SORBON DECOMPILER</span>
+                <span className="text-xs tracking-[0.15em] text-[#8d8478]">SOROBAN DECOMPILER</span>
               </div>
             </footer>
           </>

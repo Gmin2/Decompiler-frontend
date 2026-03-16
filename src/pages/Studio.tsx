@@ -14,6 +14,7 @@ const Studio = () => {
   const [activeTab, setActiveTab] = useState<Tab>('rust');
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [leftOpen, setLeftOpen] = useState(true);
+  const [network, setNetwork] = useState(NETWORKS[0]?.value ?? 'testnet');
 
   return (
     <div className="h-full overflow-hidden px-5 py-5 text-[#171412]">
@@ -47,13 +48,24 @@ const Studio = () => {
                 placeholder="Contract ID..."
                 className="paper-input w-44 rounded-full border px-4 py-2 text-sm outline-none placeholder:text-[#b4ab9e]"
               />
-              <select className="paper-input rounded-full border px-4 py-2 text-sm outline-none">
-                {NETWORKS.map((network) => (
-                  <option key={network.value} value={network.value}>
-                    {network.label}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={network}
+                  onChange={(event) => setNetwork(event.target.value)}
+                  className="paper-input min-w-32 appearance-none rounded-full border py-2 pl-4 pr-10 text-sm outline-none"
+                >
+                  {NETWORKS.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[#8f8477]">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </span>
+              </div>
               <button className="rounded-full bg-[#171412] px-5 py-2 text-[10px] uppercase tracking-[0.22em] text-[#f8f3ea] hover:bg-[#f08b57] transition-colors">
                 Fetch
               </button>
@@ -67,30 +79,11 @@ const Studio = () => {
               <div className="border-b paper-border px-5 py-4">
                 <div className="text-[10px] uppercase tracking-[0.24em] text-[#a29a8d]">Contract explorer</div>
               </div>
-              <div className="h-[calc(100%-57px)] overflow-y-auto px-4 py-4">
-                <TreeSection title="Functions" count={MOCK_SPEC.functions.length} defaultOpen>
-                  {MOCK_SPEC.functions.map((item) => (
-                    <button
-                      key={item.name}
-                      onClick={() => setSelectedItem(item.name)}
-                      className={`block w-full rounded-2xl px-3 py-3 text-left text-xs transition-colors ${
-                        selectedItem === item.name
-                          ? 'bg-[#f08b57]/8 text-[#f08b57]'
-                          : 'text-[#72695e] hover:bg-white/60 hover:text-[#171412]'
-                      }`}
-                    >
-                      <div className="font-medium">{item.name}</div>
-                      <div className="mt-1 text-[11px] text-[#a29a8d]">
-                        {item.inputs.map((input) => input.type).join(', ') || 'no args'}
-                        {item.output ? ` -> ${item.output}` : ''}
-                      </div>
-                    </button>
-                  ))}
-                </TreeSection>
-
-                <TreeSection title="Types" count={MOCK_SPEC.structs.length + MOCK_SPEC.enums.length} />
-                <TreeSection title="Errors" count={MOCK_SPEC.errors.length} />
-                <TreeSection title="Events" count={MOCK_SPEC.events.length} />
+              <div className="h-[calc(100%-57px)] overflow-y-auto px-5 py-5">
+                <ExplorerTimeline
+                  selectedItem={selectedItem}
+                  onSelectItem={setSelectedItem}
+                />
               </div>
             </aside>
           )}
@@ -194,35 +187,141 @@ const ValueBlock = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
-const TreeSection = ({
-  title,
-  count,
-  defaultOpen = false,
-  children,
+const ExplorerTimeline = ({
+  selectedItem,
+  onSelectItem,
 }: {
-  title: string;
-  count: number;
-  defaultOpen?: boolean;
-  children?: React.ReactNode;
+  selectedItem: string | null;
+  onSelectItem: (value: string | null) => void;
 }) => {
-  const [open, setOpen] = useState(defaultOpen);
-
   return (
-    <div className="mb-2">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs text-[#72695e] transition-colors hover:bg-white/50 hover:text-[#171412]"
-      >
-        <span className="text-[10px] text-[#a29a8d]">{open ? '▾' : '▸'}</span>
-        <span className="font-medium">{title}</span>
-        <span className="ml-auto rounded-full bg-white/70 px-2 py-0.5 text-[10px] text-[#a29a8d] tabular-nums">
-          {count}
-        </span>
-      </button>
-      {open && children && <div className="ml-3 mt-1 space-y-1 border-l paper-border-soft pl-3">{children}</div>}
+    <div className="relative pl-6">
+      <div className="absolute bottom-3 left-[10px] top-3 w-px bg-[#ddd4c8]" />
+
+      <TimelineGroup title="contract" tone="active">
+        <TimelineItem
+          title="hello_world"
+          subtitle="entry module / root export surface"
+          meta="root"
+          active={selectedItem === null}
+          tone="active"
+          onClick={() => onSelectItem(null)}
+        />
+      </TimelineGroup>
+
+      <TimelineGroup title="functions">
+        {MOCK_SPEC.functions.map((item, index) => (
+          <TimelineItem
+            key={item.name}
+            title={item.name}
+            subtitle={`${item.inputs.map((input) => input.type).join(', ') || 'no args'}${item.output ? ` -> ${item.output}` : ''}`}
+            meta={`fn ${String(index + 1).padStart(2, '0')}`}
+            active={selectedItem === item.name}
+            tone="active"
+            onClick={() => onSelectItem(item.name)}
+          />
+        ))}
+      </TimelineGroup>
+
+      <TimelineGroup title="contract data">
+        <TimelineItem
+          title="types"
+          subtitle={`${MOCK_SPEC.structs.length + MOCK_SPEC.enums.length} recovered definitions`}
+          meta="spec"
+          active={false}
+          tone="muted"
+          onClick={() => {}}
+        />
+        <TimelineItem
+          title="errors"
+          subtitle={`${MOCK_SPEC.errors.length} recovered variants`}
+          meta="spec"
+          active={false}
+          tone="muted"
+          onClick={() => {}}
+        />
+        <TimelineItem
+          title="events"
+          subtitle={`${MOCK_SPEC.events.length} published schemas`}
+          meta="spec"
+          active={false}
+          tone="muted"
+          onClick={() => {}}
+        />
+      </TimelineGroup>
+
+      <TimelineGroup title="runtime">
+        <TimelineItem
+          title="host imports"
+          subtitle={`${MOCK_IMPORTS.resolved}/${MOCK_IMPORTS.total} resolved runtime calls`}
+          meta="host"
+          active={false}
+          tone="muted"
+          onClick={() => onSelectItem(null)}
+        />
+      </TimelineGroup>
     </div>
   );
 };
+
+const TimelineGroup = ({
+  title,
+  tone = 'muted',
+  children,
+}: {
+  title: string;
+  tone?: 'active' | 'muted';
+  children: React.ReactNode;
+}) => (
+  <div className="relative pb-4">
+    <div className={`mb-2 flex items-center gap-3 ${tone === 'active' ? 'text-[#171412]' : 'text-[#72695e]'}`}>
+      <span className={`absolute left-[-18px] h-2.5 w-2.5 rounded-full border ${tone === 'active' ? 'border-[#22c55e] bg-[#22c55e]' : 'border-[#d6cdc0] bg-[#f6f1e8]'}`} />
+      <h3 className="text-[1.05rem] font-semibold capitalize tracking-[-0.02em]">{title}</h3>
+    </div>
+    <div className="space-y-1">{children}</div>
+  </div>
+);
+
+const TimelineItem = ({
+  title,
+  subtitle,
+  meta,
+  active,
+  tone,
+  onClick,
+}: {
+  title: string;
+  subtitle: string;
+  meta: string;
+  active: boolean;
+  tone: 'active' | 'muted';
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`relative block w-full rounded-[18px] px-0 py-2 text-left transition-colors ${
+      active ? 'bg-white/70' : 'hover:bg-white/45'
+    }`}
+  >
+    <span
+      className={`absolute left-[-18px] top-[18px] h-1.5 w-1.5 rounded-full ${
+        tone === 'active' ? 'bg-[#22c55e]' : 'bg-[#d8d0c3]'
+      }`}
+    />
+    <div className="flex items-start justify-between gap-3 px-3">
+      <div className="min-w-0">
+        <div className={`text-[0.98rem] font-semibold tracking-[-0.02em] ${active ? 'text-[#171412]' : 'text-[#3f382f]'}`}>
+          {title}
+        </div>
+        <div className="mt-1 text-[12px] leading-5 text-[#7e7468]">
+          {subtitle}
+        </div>
+      </div>
+      <span className="shrink-0 pt-0.5 text-[11px] text-[#b2a89b]">{meta}</span>
+    </div>
+  </button>
+);
 
 const CodeView = ({ code }: { code: string }) => {
   const lines = code.split('\n');

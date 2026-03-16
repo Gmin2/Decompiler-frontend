@@ -1,18 +1,20 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CONTRACTS, GALLERY_SCORES, formatName, COMPLEXITY_COLOR, type Contract } from '../data/contracts';
 
 type SortKey = 'name' | 'size' | 'score';
 type ComplexityFilter = 'all' | 'simple' | 'medium' | 'complex';
 
-const ScoreBar = ({ value }: { value: number }) => {
-  const color = value >= 0.9 ? 'score-green' : value >= 0.8 ? 'score-yellow' : value >= 0.5 ? 'score-cyan' : 'score-red';
-  return (
-    <div className="h-1 bg-[#e8dfd3] w-full rounded-full overflow-hidden">
-      <div className={`h-full ${color}`} style={{ width: `${value * 100}%` }} />
-    </div>
-  );
-};
+const ScoreBar = ({ value }: { value: number }) => (
+  <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#e8dfd3]">
+    <div
+      className="h-full rounded-full bg-[linear-gradient(90deg,#f08b57_0%,#d39f69_45%,#80915f_100%)]"
+      style={{ width: `${value * 100}%` }}
+    />
+  </div>
+);
+
+const scoreLabel = (value: number) => `${Math.round(value * 100)}%`;
 
 const Gallery = () => {
   const [search, setSearch] = useState('');
@@ -20,23 +22,24 @@ const Gallery = () => {
   const [sort, setSort] = useState<SortKey>('name');
   const navigate = useNavigate();
 
-  const filtered = CONTRACTS
-    .filter((c) => {
-      if (complexity !== 'all' && c.complexity !== complexity) return false;
-      if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      if (sort === 'name') return a.name.localeCompare(b.name);
-      if (sort === 'size') return a.bytes - b.bytes;
-      return (GALLERY_SCORES[b.name]?.overall ?? 0) - (GALLERY_SCORES[a.name]?.overall ?? 0);
-    });
+  const filtered = useMemo(() => {
+    return [...CONTRACTS]
+      .filter((contract) => {
+        if (complexity !== 'all' && contract.complexity !== complexity) return false;
+        if (search && !formatName(contract.name).toLowerCase().includes(search.toLowerCase())) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (sort === 'name') return formatName(a.name).localeCompare(formatName(b.name));
+        if (sort === 'size') return a.bytes - b.bytes;
+        return (GALLERY_SCORES[b.name]?.overall ?? 0) - (GALLERY_SCORES[a.name]?.overall ?? 0);
+      });
+  }, [complexity, search, sort]);
 
   return (
     <>
-      {/* Header */}
-      <section className="px-[4vw] pt-14 pb-8">
-        <div className="flex items-start gap-4 mb-10">
+      <section className="px-[4vw] pb-8 pt-14">
+        <div className="mb-10 flex items-start gap-4">
           <span
             className="text-5xl font-light tracking-tighter text-[#b9b0a3]"
             style={{ fontFamily: "'Playfair Display', serif" }}
@@ -44,120 +47,143 @@ const Gallery = () => {
             04
           </span>
           <div>
-            <span className="text-xs tracking-[0.15em] block paper-text">EXAMPLE GALLERY</span>
-            <span className="text-[10px] tracking-[0.15em] paper-muted mt-1 block">
-              {CONTRACTS.length} BUNDLED CONTRACTS WITH PRE-COMPUTED SCORES
+            <span className="block text-xs tracking-[0.15em] paper-text">EXAMPLE GALLERY</span>
+            <span className="mt-1 block text-[10px] tracking-[0.15em] paper-muted">
+              {CONTRACTS.length} BUNDLED CONTRACTS WITH RECOVERY SCORES
             </span>
           </div>
+        </div>
+        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+          <div>
+            <h1
+              className="max-w-3xl text-[clamp(2.4rem,4.8vw,4.6rem)] leading-[0.98] tracking-[-0.04em] text-[#171412]"
+              style={{ fontFamily: "'Playfair Display', serif" }}
+            >
+              Browse bundled Soroban contracts and inspect reconstruction quality.
+            </h1>
+          </div>
+          <p className="max-w-xl text-sm leading-8 paper-body">
+            Use the bundled examples to test Sorbon against simple, medium, and complex contracts.
+            Each card shows typed recovery, signature recovery, and function body reconstruction scores.
+          </p>
         </div>
       </section>
 
       <div className="mx-[4vw] h-px bg-[#e1d8cc]" />
 
-      {/* Filter bar */}
-      <section className="px-[4vw] py-5 flex flex-wrap items-center gap-6">
+      <section className="flex flex-wrap items-center gap-6 px-[4vw] py-5">
         <input
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(event) => setSearch(event.target.value)}
           placeholder="Search contracts..."
-          className="bg-transparent border-b paper-border focus:border-[#f08b57] outline-none py-2 text-sm paper-text w-56 transition-colors"
+          className="w-56 border-b bg-transparent py-2 text-sm paper-text outline-none transition-colors paper-border focus:border-[#f08b57]"
         />
 
         <div className="flex items-center gap-2">
           <span className="text-[10px] tracking-[0.2em] paper-muted">COMPLEXITY</span>
-          {(['all', 'simple', 'medium', 'complex'] as ComplexityFilter[]).map((f) => (
+          {(['all', 'simple', 'medium', 'complex'] as ComplexityFilter[]).map((item) => (
             <button
-              key={f}
-              onClick={() => setComplexity(f)}
-              className={`text-[10px] tracking-wider px-3 py-1 border transition-colors ${
-                complexity === f
+              key={item}
+              type="button"
+              onClick={() => setComplexity(item)}
+              className={`border px-3 py-1 text-[10px] tracking-wider transition-colors ${
+                complexity === item
                   ? 'border-[#f08b57] text-[#f08b57]'
-                  : 'paper-border paper-muted hover:text-[#171412] hover:border-[#d1c6b8]'
+                  : 'paper-border paper-muted hover:border-[#d1c6b8] hover:text-[#171412]'
               }`}
             >
-              {f.toUpperCase()}
+              {item.toUpperCase()}
             </button>
           ))}
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-[10px] tracking-[0.2em] paper-muted">SORT</span>
-          {(['name', 'size', 'score'] as SortKey[]).map((s) => (
+          {(['name', 'size', 'score'] as SortKey[]).map((item) => (
             <button
-              key={s}
-              onClick={() => setSort(s)}
-              className={`text-[10px] tracking-wider px-3 py-1 border transition-colors ${
-                sort === s
+              key={item}
+              type="button"
+              onClick={() => setSort(item)}
+              className={`border px-3 py-1 text-[10px] tracking-wider transition-colors ${
+                sort === item
                   ? 'border-[#f08b57] text-[#f08b57]'
-                  : 'paper-border paper-muted hover:text-[#171412] hover:border-[#d1c6b8]'
+                  : 'paper-border paper-muted hover:border-[#d1c6b8] hover:text-[#171412]'
               }`}
             >
-              {s.toUpperCase()}
+              {item.toUpperCase()}
             </button>
           ))}
         </div>
 
-        <span className="text-[10px] tracking-wider paper-muted ml-auto tabular-nums">
+        <span className="ml-auto text-[10px] tracking-wider paper-muted tabular-nums">
           {filtered.length} results
         </span>
       </section>
 
       <div className="mx-[4vw] h-px bg-[#e1d8cc]" />
 
-      {/* Contract grid */}
       <section className="px-[4vw] py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0">
-          {filtered.map((c) => (
-            <GalleryCard key={c.name} contract={c} navigate={navigate} />
-          ))}
+        <div className="rounded-[32px] border p-4 paper-border-soft hatch-fill-dense">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filtered.map((contract) => (
+              <GalleryCard key={contract.name} contract={contract} navigate={navigate} />
+            ))}
+          </div>
         </div>
       </section>
     </>
   );
 };
 
-const GalleryCard = ({ contract: c, navigate }: { contract: Contract; navigate: ReturnType<typeof useNavigate> }) => {
-  const score = GALLERY_SCORES[c.name];
+const GalleryCard = ({
+  contract,
+  navigate,
+}: {
+  contract: Contract;
+  navigate: ReturnType<typeof useNavigate>;
+}) => {
+  const score = GALLERY_SCORES[contract.name];
+
   return (
-    <div className="paper-panel rounded-[28px] p-5 group relative">
-      <div className="absolute left-0 top-0 w-0.5 h-full bg-[#f08b57] scale-y-0 group-hover:scale-y-100 transition-transform duration-200 origin-top rounded-full" />
+    <div className="paper-panel group relative rounded-[28px] p-5">
+      <div className="absolute left-0 top-0 h-full w-0.5 origin-top scale-y-0 rounded-full bg-[#f08b57] transition-transform duration-200 group-hover:scale-y-100" />
 
-      <div className="text-sm paper-text mb-2">{formatName(c.name)}</div>
+      <div className="mb-2 text-sm paper-text">{formatName(contract.name)}</div>
 
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-xs tabular-nums paper-body">{c.size}</span>
-        <span className={`text-[10px] tracking-[0.15em] ${COMPLEXITY_COLOR[c.complexity]}`}>
-          {c.complexity}
+      <div className="mb-4 flex items-center justify-between">
+        <span className="text-xs paper-body tabular-nums">{contract.size}</span>
+        <span className={`text-[10px] tracking-[0.15em] ${COMPLEXITY_COLOR[contract.complexity]}`}>
+          {contract.complexity}
         </span>
       </div>
 
       {score && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between text-[10px] mb-1">
-            <span className="paper-muted">ACCURACY</span>
-            <span className="paper-text tabular-nums">{(score.overall * 100).toFixed(0)}%</span>
-          </div>
-          <ScoreBar value={score.overall} />
+        <div className="mb-5 space-y-3">
+          <MetricRow label="Typed" value={score.types} />
+          <MetricRow label="Signatures" value={score.signatures} />
+          <MetricRow label="Function body" value={score.bodies} />
         </div>
       )}
 
       {score?.functions && (
-        <div className="text-[10px] paper-muted mb-4 truncate">
+        <div className="mb-4 text-[10px] paper-muted truncate">
           {score.functions.join(', ')}
         </div>
       )}
 
       <div className="flex gap-2">
         <button
-          onClick={() => navigate(`/studio?example=${c.name}`)}
-          className="flex-1 text-[10px] tracking-wider border paper-border py-1.5 rounded-full text-center paper-body hover:border-[#f08b57] hover:text-[#f08b57] transition-colors"
+          type="button"
+          onClick={() => navigate(`/studio?example=${contract.name}`)}
+          className="flex-1 rounded-full border py-1.5 text-center text-[10px] tracking-wider transition-colors paper-border paper-body hover:border-[#f08b57] hover:text-[#f08b57]"
         >
           DECOMPILE
         </button>
         <button
+          type="button"
           onClick={() => navigate('/compare')}
-          className="flex-1 text-[10px] tracking-wider border paper-border py-1.5 rounded-full text-center paper-body hover:border-[#f08b57] hover:text-[#f08b57] transition-colors"
+          className="flex-1 rounded-full border py-1.5 text-center text-[10px] tracking-wider transition-colors paper-border paper-body hover:border-[#f08b57] hover:text-[#f08b57]"
         >
           COMPARE
         </button>
@@ -165,5 +191,15 @@ const GalleryCard = ({ contract: c, navigate }: { contract: Contract; navigate: 
     </div>
   );
 };
+
+const MetricRow = ({ label, value }: { label: string; value: number }) => (
+  <div>
+    <div className="mb-1 flex items-center justify-between text-[10px]">
+      <span className="paper-muted uppercase tracking-[0.16em]">{label}</span>
+      <span className="paper-text tabular-nums">{scoreLabel(value)}</span>
+    </div>
+    <ScoreBar value={value} />
+  </div>
+);
 
 export default Gallery;

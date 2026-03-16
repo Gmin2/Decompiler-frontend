@@ -3,29 +3,29 @@ import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 
 const features = [
   {
-    title: 'WASM Parser',
+    title: 'Spec Extraction',
     description:
-      'Parse WebAssembly binaries, resolve host imports, and map obfuscated module/field pairs to their semantic names — all in the browser.',
+      'Read the contractspecv0 custom section embedded in Soroban WASM and recover typed function signatures, structs, enums, errors, and event schemas via soroban-spec XDR deserialization.',
   },
   {
-    title: 'Pattern Engine',
+    title: 'Stack Simulation',
     description:
-      '24 recognized host function patterns mapped to idiomatic Soroban SDK calls — storage, auth, crypto, collections, and more.',
+      'Parse the binary with walrus, trace exported dispatcher chains, and simulate the WASM operand stack instruction-by-instruction across locals, globals, memory stores, and calls.',
   },
   {
-    title: 'Type Recovery',
+    title: 'Pattern Recognition',
     description:
-      'Reconstruct full contract specs — structs, enums, errors, and events — from embedded contractspecv0 metadata sections.',
+      'Map host call sequences back to Soroban SDK chains, strip Val encoding boilerplate, decode SymbolSmall characters, collapse i128 pairs, and optimize the intermediate representation.',
   },
   {
-    title: 'Rust Output',
+    title: 'Code Generation',
     description:
-      'Generate clean, readable Rust with proper #[contract] macros, typed function signatures, and idiomatic SDK usage patterns.',
+      'Walk the IR and emit Rust token streams with syn and quote, reconstructing #[contracttype], #[contracterror], #[contractimpl], storage access, auth calls, and cross-contract invocations.',
   },
   {
-    title: 'Studio',
+    title: 'Browser Runtime',
     description:
-      'Three-panel workspace with contract explorer, syntax-highlighted code viewer, and live inspector — no install required.',
+      'Compile the entire pipeline to WebAssembly through wasm-pack so decompilation runs client-side in the browser, with zero server dependency.',
   },
 ];
 
@@ -145,25 +145,34 @@ const SceneIllustration = ({ activeDevice }: { activeDevice: number | null }) =>
 
 /* ── Main component ── */
 const ExpandableFeatures = () => {
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
 
   const handleSelect = (index: number) => {
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
   return (
-    <section className="py-20 px-6 sm:px-10 lg:px-16">
+    <section className="px-6 pb-24 pt-12 sm:px-10 lg:px-16">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-14 grid items-end gap-4 md:grid-cols-2">
-          <h2 className="text-3xl text-[#171412] lg:text-4xl" style={{ fontFamily: "'Playfair Display', serif" }}>
-            How the decompiler works
-          </h2>
-          <p className="text-sm leading-relaxed text-[#72695e]">
-            Five stages that transform opaque WASM into auditable Rust — all running client-side.
-          </p>
-        </div>
+        <div className="relative overflow-hidden rounded-[40px] border border-[rgba(175,160,138,0.58)] bg-[rgba(255,250,244,0.4)] px-6 py-8 shadow-[0_18px_42px_rgba(58,46,30,0.04)] sm:px-8 lg:px-10 lg:py-10">
+          <div className="pointer-events-none absolute inset-[18px] rounded-[30px] border border-[rgba(186,172,151,0.44)]" />
+          <div className="pointer-events-none absolute left-[18px] right-[18px] top-[58px] h-[18px] border-y border-[rgba(160,148,130,0.45)] hatch-fill-dense opacity-70" />
+          <div className="pointer-events-none absolute bottom-[26px] right-[34px] top-[112px] hidden w-[96px] rounded-[24px] border border-[rgba(170,155,132,0.34)] hatch-fill lg:block" />
+          <div className="pointer-events-none absolute bottom-[54px] left-[42px] hidden h-[44px] w-[180px] rounded-[20px] border border-[rgba(170,155,132,0.28)] hatch-fill opacity-70 lg:block" />
 
-        <div className="grid items-center gap-8 lg:grid-cols-5">
+          <div className="relative mb-14 grid items-end gap-4 md:grid-cols-2">
+            <div>
+              <div className="section-kicker mb-4">Technical flow</div>
+              <h2 className="text-3xl text-[#171412] lg:text-4xl" style={{ fontFamily: "'Playfair Display', serif" }}>
+                How Sorbon decompiles Soroban contracts
+              </h2>
+            </div>
+            <p className="max-w-xl text-[15px] leading-8 text-[#5d5549]">
+              A staged browser-side pipeline that extracts spec data, simulates execution, recognizes Soroban SDK patterns, and emits readable Rust.
+            </p>
+          </div>
+
+          <div className="relative grid items-center gap-8 lg:grid-cols-5">
           {/* Feature accordion */}
           <div className="relative z-10 lg:col-span-2">
             <AnimatePresence>
@@ -177,14 +186,14 @@ const ExpandableFeatures = () => {
                   <button
                     disabled={expandedIndex === 0}
                     onClick={() => handleSelect(expandedIndex - 1)}
-                    className="h-9 w-9 rounded-full border border-[#d6cfbf] bg-white/70 flex items-center justify-center text-[#72695e] disabled:opacity-30 hover:border-[#f08b57] transition-colors"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#cfc3b2] bg-white/84 text-[#5f564b] transition-colors hover:border-[#f08b57] disabled:opacity-30"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 15l-6-6-6 6"/></svg>
                   </button>
                   <button
                     disabled={expandedIndex === features.length - 1}
                     onClick={() => handleSelect(expandedIndex + 1)}
-                    className="h-9 w-9 rounded-full border border-[#d6cfbf] bg-white/70 flex items-center justify-center text-[#72695e] disabled:opacity-30 hover:border-[#f08b57] transition-colors"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#cfc3b2] bg-white/84 text-[#5f564b] transition-colors hover:border-[#f08b57] disabled:opacity-30"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 9l6 6 6-6"/></svg>
                   </button>
@@ -216,10 +225,13 @@ const ExpandableFeatures = () => {
                       }}
                       className={`group relative min-w-0 max-w-xs overflow-hidden rounded-3xl text-left ring-1 transition-colors duration-500 max-md:mx-auto ${
                         isActive
-                          ? 'w-full bg-white/60 shadow-md shadow-black/5 ring-[#d6cfbf]'
-                          : 'ring-transparent text-[#a39a8f] hover:text-[#72695e]'
+                          ? 'w-full bg-[rgba(255,252,247,0.88)] shadow-md shadow-black/5 ring-[#d1c5b4]'
+                          : 'ring-transparent text-[#92887b] hover:text-[#5d5549]'
                       }`}
                     >
+                      {isActive && (
+                        <div className="pointer-events-none absolute inset-y-0 right-0 w-14 border-l border-[rgba(172,158,137,0.32)] hatch-fill opacity-55" />
+                      )}
                       <AnimatePresence initial={false}>
                         {!isActive && (
                           <motion.button
@@ -232,7 +244,7 @@ const ExpandableFeatures = () => {
                             className="flex h-10 cursor-pointer items-center gap-2 px-4"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-                            <h3 className="text-nowrap text-sm">{feature.title}</h3>
+                            <h3 className="text-nowrap text-sm tracking-[0.04em]">{feature.title}</h3>
                           </motion.button>
                         )}
 
@@ -243,9 +255,12 @@ const ExpandableFeatures = () => {
                             animate={{ opacity: 1, height: 'auto', filter: 'blur(0px)', y: 0 }}
                             exit={{ opacity: 0, height: 0, filter: 'blur(4px)', y: -4 }}
                             transition={{ duration: 0.6, type: 'spring', bounce: 0.2 }}
-                            className="px-6"
+                            className="relative px-6"
                           >
-                            <p className="text-sm leading-relaxed text-[#72695e]">
+                            <div className="mb-3 text-[10px] uppercase tracking-[0.24em] text-[#a48a73]">
+                              Stage {index + 1}
+                            </div>
+                            <p className="text-[15px] leading-8 text-[#5d5549]">
                               <strong className="text-[#171412]">{feature.title}.</strong>{' '}
                               {feature.description}
                             </p>
@@ -260,9 +275,13 @@ const ExpandableFeatures = () => {
           </div>
 
           {/* Illustration */}
-          <div className="max-lg:row-start-1 lg:col-span-3 lg:-translate-x-10">
+          <div className="relative max-lg:row-start-1 lg:col-span-3 lg:-translate-x-6">
+            <div className="pointer-events-none absolute left-1/2 top-0 hidden h-full w-px -translate-x-1/2 border-l border-dashed border-[rgba(184,172,155,0.52)] lg:block" />
+            <div className="pointer-events-none absolute left-[12%] top-[18%] hidden h-[72px] w-[140px] rounded-[24px] border border-[rgba(170,155,132,0.28)] hatch-fill opacity-55 lg:block" />
+            <div className="pointer-events-none absolute bottom-[8%] right-[10%] hidden h-[56px] w-[122px] rounded-[20px] border border-[rgba(170,155,132,0.28)] hatch-fill-dense opacity-60 lg:block" />
             <SceneIllustration activeDevice={expandedIndex} />
           </div>
+        </div>
         </div>
       </div>
     </section>

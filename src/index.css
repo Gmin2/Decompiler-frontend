@@ -263,7 +263,9 @@ body {
 }
 
 .hero-wordmark {
-  font-family: "Brush Script MT", "Segoe Script", cursive;
+  font-family: "Playfair Display", serif;
+  font-weight: 600;
+  font-style: italic;
 }
 
 .hero-annotation {

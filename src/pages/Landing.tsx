@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { NETWORKS } from '../data/contracts';
+import ExpandableFeatures from '../components/ExpandableFeatures';
 
 
 const opcodeMarkers = [
@@ -382,6 +383,8 @@ const Landing = () => {
           </div>
         </div>
       </section>
+
+      <ExpandableFeatures />
     </div>
   );
 };
