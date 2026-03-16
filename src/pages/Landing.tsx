@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { NETWORKS } from '../data/contracts';
+import { useDecompiler } from '../context/DecompilerContext';
 import ExpandableFeatures from '../components/ExpandableFeatures';
 
 
@@ -130,8 +131,10 @@ const Landing = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [contractId, setContractId] = useState('');
   const [network, setNetwork] = useState('testnet');
+  const [fetchLoading, setFetchLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { loadFromFile, fetchFromRpc, loading } = useDecompiler();
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -150,6 +153,20 @@ const Landing = () => {
   const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file?.name.endsWith('.wasm')) setSelectedFile(file);
+  };
+
+  const handleDecompile = async () => {
+    if (!selectedFile) return;
+    await loadFromFile(selectedFile);
+    navigate('/studio');
+  };
+
+  const handleFetchContract = async () => {
+    if (!contractId) return;
+    setFetchLoading(true);
+    await fetchFromRpc(contractId, network);
+    setFetchLoading(false);
+    navigate('/studio');
   };
 
   return (
@@ -210,14 +227,37 @@ const Landing = () => {
                 <p className="mt-6 max-w-md text-sm leading-relaxed text-[#7d7468]">
                   Turn any Soroban contract binary into readable Rust — instantly, in your browser.
                 </p>
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-[11px] uppercase tracking-[0.2em] text-[#4a4239]">
-                  <span className="rounded-full border border-[#b8ad9e] bg-white/80 px-5 py-2.5 shadow-sm">
+
+                {/* CTA buttons */}
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/studio')}
+                    className="inline-flex h-12 items-center justify-center rounded-full bg-[#f08b57] px-8 text-[11px] uppercase tracking-[0.28em] text-white transition hover:bg-[#e07a46]"
+                  >
+                    Open Studio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const dropCard = document.querySelector('.action-draft-card');
+                      dropCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                    className="inline-flex h-12 items-center justify-center rounded-full border border-[#171412] bg-white/70 px-8 text-[11px] uppercase tracking-[0.28em] text-[#171412] transition hover:border-[#f08b57] hover:text-[#f08b57]"
+                  >
+                    Drop a Wasm
+                  </button>
+                </div>
+
+                {/* Tag pills */}
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-[0.2em] text-[#4a4239]">
+                  <span className="rounded-full border border-[#b8ad9e] bg-white/80 px-4 py-2 shadow-sm">
                     Wasm uploads
                   </span>
-                  <span className="rounded-full border border-[#b8ad9e] bg-white/80 px-5 py-2.5 shadow-sm">
+                  <span className="rounded-full border border-[#b8ad9e] bg-white/80 px-4 py-2 shadow-sm">
                     Contract fetch
                   </span>
-                  <span className="rounded-full border border-[#b8ad9e] bg-white/80 px-5 py-2.5 shadow-sm">
+                  <span className="rounded-full border border-[#b8ad9e] bg-white/80 px-4 py-2 shadow-sm">
                     Compare output
                   </span>
                 </div>
@@ -277,13 +317,14 @@ const Landing = () => {
                       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                         <button
                           type="button"
+                          disabled={loading}
                           onClick={(event) => {
                             event.stopPropagation();
-                            navigate('/studio');
+                            handleDecompile();
                           }}
-                          className="inline-flex h-12 items-center justify-center rounded-full bg-[#171412] px-6 text-[11px] uppercase tracking-[0.28em] text-[#f8f3ea] transition hover:bg-[#f08b57]"
+                          className="inline-flex h-12 items-center justify-center rounded-full bg-[#171412] px-6 text-[11px] uppercase tracking-[0.28em] text-[#f8f3ea] transition hover:bg-[#f08b57] disabled:opacity-50"
                         >
-                          Decompile now
+                          {loading ? 'Decompiling...' : 'Decompile now'}
                         </button>
                         <button
                           type="button"
@@ -368,10 +409,11 @@ const Landing = () => {
                   </label>
                   <button
                     type="button"
-                    onClick={() => contractId && navigate(`/studio?id=${contractId}&network=${network}`)}
-                    className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#171412] px-6 text-[11px] uppercase tracking-[0.28em] text-[#f8f3ea] transition hover:bg-[#f08b57]"
+                    disabled={fetchLoading || !contractId}
+                    onClick={handleFetchContract}
+                    className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#171412] px-6 text-[11px] uppercase tracking-[0.28em] text-[#f8f3ea] transition hover:bg-[#f08b57] disabled:opacity-50"
                   >
-                    Open in studio
+                    {fetchLoading ? 'Fetching...' : 'Open in studio'}
                   </button>
                   <div className="rounded-[24px] border border-[#e7ded2] bg-white/54 px-4 py-4 text-[11px] uppercase tracking-[0.24em] text-[#9d9387]">
                     on-chain lookup / contract id / network route

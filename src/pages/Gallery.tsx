@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CONTRACTS, GALLERY_SCORES, formatName, COMPLEXITY_COLOR, type Contract } from '../data/contracts';
+import { useDecompiler } from '../context/DecompilerContext';
 
 type SortKey = 'name' | 'size' | 'score';
 type ComplexityFilter = 'all' | 'simple' | 'medium' | 'complex';
@@ -144,6 +145,15 @@ const GalleryCard = ({
   navigate: ReturnType<typeof useNavigate>;
 }) => {
   const score = GALLERY_SCORES[contract.name];
+  const { loadFromUrl } = useDecompiler();
+  const [cardLoading, setCardLoading] = useState(false);
+
+  const handleDecompile = async () => {
+    setCardLoading(true);
+    await loadFromUrl(`/contracts/${contract.name}.wasm`, formatName(contract.name));
+    setCardLoading(false);
+    navigate('/studio');
+  };
 
   return (
     <div className="paper-panel group relative rounded-[28px] p-5">
@@ -175,14 +185,15 @@ const GalleryCard = ({
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={() => navigate(`/studio?example=${contract.name}`)}
-          className="flex-1 rounded-full border py-1.5 text-center text-[10px] tracking-wider transition-colors paper-border paper-body hover:border-[#f08b57] hover:text-[#f08b57]"
+          disabled={cardLoading}
+          onClick={handleDecompile}
+          className="flex-1 rounded-full border py-1.5 text-center text-[10px] tracking-wider transition-colors paper-border paper-body hover:border-[#f08b57] hover:text-[#f08b57] disabled:opacity-50"
         >
-          DECOMPILE
+          {cardLoading ? 'LOADING...' : 'DECOMPILE'}
         </button>
         <button
           type="button"
-          onClick={() => navigate('/compare')}
+          onClick={() => navigate(`/studio?example=${contract.name}`)}
           className="flex-1 rounded-full border py-1.5 text-center text-[10px] tracking-wider transition-colors paper-border paper-body hover:border-[#f08b57] hover:text-[#f08b57]"
         >
           COMPARE

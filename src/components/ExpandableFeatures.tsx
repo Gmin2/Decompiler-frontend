@@ -154,7 +154,7 @@ const ExpandableFeatures = () => {
   return (
     <section className="px-6 pb-24 pt-12 sm:px-10 lg:px-16">
       <div className="mx-auto max-w-5xl">
-        <div className="relative overflow-hidden rounded-[40px] border border-[rgba(175,160,138,0.58)] bg-[rgba(255,250,244,0.4)] px-6 py-8 shadow-[0_18px_42px_rgba(58,46,30,0.04)] sm:px-8 lg:px-10 lg:py-10">
+        <div className="relative overflow-visible rounded-[40px] border border-[rgba(175,160,138,0.58)] bg-[rgba(255,250,244,0.4)] px-6 py-8 shadow-[0_18px_42px_rgba(58,46,30,0.04)] sm:px-8 lg:px-10 lg:py-10">
           <div className="pointer-events-none absolute inset-[18px] rounded-[30px] border border-[rgba(186,172,151,0.44)]" />
           <div className="pointer-events-none absolute left-[18px] right-[18px] top-[58px] h-[18px] border-y border-[rgba(160,148,130,0.45)] hatch-fill-dense opacity-70" />
           <div className="pointer-events-none absolute bottom-[26px] right-[34px] top-[112px] hidden w-[96px] rounded-[24px] border border-[rgba(170,155,132,0.34)] hatch-fill lg:block" />
@@ -186,14 +186,14 @@ const ExpandableFeatures = () => {
                   <button
                     disabled={expandedIndex === 0}
                     onClick={() => handleSelect(expandedIndex - 1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#cfc3b2] bg-white/84 text-[#5f564b] transition-colors hover:border-[#f08b57] disabled:opacity-30"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[#b5a995] bg-white text-[#3a342c] shadow-sm transition-colors hover:border-[#f08b57] hover:text-[#f08b57] disabled:opacity-30"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 15l-6-6-6 6"/></svg>
                   </button>
                   <button
                     disabled={expandedIndex === features.length - 1}
                     onClick={() => handleSelect(expandedIndex + 1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#cfc3b2] bg-white/84 text-[#5f564b] transition-colors hover:border-[#f08b57] disabled:opacity-30"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[#b5a995] bg-white text-[#3a342c] shadow-sm transition-colors hover:border-[#f08b57] hover:text-[#f08b57] disabled:opacity-30"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 9l6 6 6-6"/></svg>
                   </button>

@@ -1,38 +1,13 @@
-import { useState, type ChangeEvent } from 'react';
+import { useState, useRef, type ChangeEvent } from 'react';
+import { scoreWasm, decompileWasm } from '../lib/wasm';
 
-const MOCK_ORIGINAL = `#![no_std]
-use soroban_sdk::{contract, contractimpl, symbol_short, vec, Env, Symbol, Vec};
-
-#[contract]
-pub struct HelloContract;
-
-#[contractimpl]
-impl HelloContract {
-    pub fn hello(env: Env, to: Symbol) -> Vec<Symbol> {
-        vec![&env, symbol_short!("Hello"), to]
-    }
-}`;
-
-const MOCK_DECOMPILED = `#![no_std]
-use soroban_sdk::{contract, contractimpl, vec, Env, Symbol, Vec};
-
-#[contract]
-pub struct HelloContract;
-
-#[contractimpl]
-impl HelloContract {
-    pub fn hello(env: Env, to: Symbol) -> Vec<Symbol> {
-        vec![&env, Symbol::new(&env, "Hello"), to]
-    }
-}`;
-
-const SCORE = {
-  overall: 0.92,
-  types: 1.0,
-  signatures: 1.0,
-  bodies: 0.85,
-  function_scores: [{ name: 'hello', signature: 1.0, body: 0.85 }],
-};
+interface ScoreResult {
+  overall: number;
+  types: number;
+  signatures: number;
+  bodies: number;
+  function_scores: { name: string; signature: number; body: number }[];
+}
 
 const statusTone = (same: boolean) =>
   same ? 'bg-transparent' : 'bg-[#f08b57]/[0.08]';
@@ -41,9 +16,12 @@ const scoreColor = (value: number) =>
   value >= 0.9 ? 'score-green' : value >= 0.8 ? 'score-yellow' : value >= 0.5 ? 'score-cyan' : 'score-red';
 
 const Compare = () => {
-  const [originalText, setOriginalText] = useState(MOCK_ORIGINAL);
-  const [decompiledText, setDecompiledText] = useState(MOCK_DECOMPILED);
-  const [hasScore, setHasScore] = useState(true);
+  const [originalText, setOriginalText] = useState('');
+  const [decompiledText, setDecompiledText] = useState('');
+  const [scoreResult, setScoreResult] = useState<ScoreResult | null>(null);
+  const [scoring, setScoring] = useState(false);
+  const [decompiling, setDecompiling] = useState(false);
+  const wasmInputRef = useRef<HTMLInputElement>(null);
 
   const handleOriginalFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -61,14 +39,32 @@ const Compare = () => {
     reader.readAsText(file);
   };
 
-  const runComparison = () => {
-    if (originalText && decompiledText) setHasScore(true);
+  const handleWasmFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setDecompiling(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const source = await decompileWasm(new Uint8Array(buffer));
+      setDecompiledText(source);
+    } catch (e) {
+      setDecompiledText(`// Decompilation error: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setDecompiling(false);
+    }
   };
 
-  const loadMock = () => {
-    setOriginalText(MOCK_ORIGINAL);
-    setDecompiledText(MOCK_DECOMPILED);
-    setHasScore(true);
+  const runComparison = async () => {
+    if (!originalText || !decompiledText) return;
+    setScoring(true);
+    try {
+      const result = await scoreWasm(originalText, decompiledText);
+      setScoreResult(result);
+    } catch (e) {
+      console.error('Scoring failed:', e);
+    } finally {
+      setScoring(false);
+    }
   };
 
   const originalLines = originalText.split('\n');
@@ -89,22 +85,16 @@ const Compare = () => {
                 Compare source and decompiled output
               </h1>
               <p className="mt-4 max-w-3xl text-sm leading-7 text-[#72695e]">
-                Review reconstructed Rust against the expected source with a diff layout closer to a GitHub code review, while keeping Sorbon’s lighter paper palette.
+                Upload original Rust source and decompiled output (or a .wasm to decompile), then run the AST-based accuracy benchmark.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-3">
               <button
-                onClick={loadMock}
-                className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors"
-              >
-                Load mock
-              </button>
-              <button
                 onClick={() => {
                   setOriginalText('');
                   setDecompiledText('');
-                  setHasScore(false);
+                  setScoreResult(null);
                 }}
                 className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors"
               >
@@ -112,23 +102,25 @@ const Compare = () => {
               </button>
               <button
                 onClick={runComparison}
-                className="rounded-full bg-[#171412] px-5 py-2 text-[10px] uppercase tracking-[0.22em] text-[#f8f3ea] hover:bg-[#f08b57] transition-colors"
+                disabled={scoring || !originalText || !decompiledText}
+                className="rounded-full bg-[#171412] px-5 py-2 text-[10px] uppercase tracking-[0.22em] text-[#f8f3ea] hover:bg-[#f08b57] transition-colors disabled:opacity-50"
               >
-                Run compare
+                {scoring ? 'Scoring...' : 'Run compare'}
               </button>
             </div>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <span className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[11px] uppercase tracking-[0.2em] text-[#8f8477]">
-              Mock diff ready
-            </span>
-            <span className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[11px] uppercase tracking-[0.2em] text-[#8f8477]">
-              {changedCount} changed lines
-            </span>
-            <span className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[11px] uppercase tracking-[0.2em] text-[#8f8477]">
-              GitHub-style review
-            </span>
+            {originalText && decompiledText && (
+              <span className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[11px] uppercase tracking-[0.2em] text-[#8f8477]">
+                {changedCount} changed lines
+              </span>
+            )}
+            {scoreResult && (
+              <span className="rounded-full border border-[#78875b] bg-[#78875b]/10 px-4 py-2 text-[11px] uppercase tracking-[0.2em] text-[#78875b]">
+                {Math.round(scoreResult.overall * 100)}% overall accuracy
+              </span>
+            )}
           </div>
         </section>
 
@@ -138,94 +130,101 @@ const Compare = () => {
               <UploadCard
                 title="Original source"
                 subtitle="Expected Rust implementation"
+                accept=".rs"
                 onChange={handleOriginalFile}
               />
-              <UploadCard
-                title="Decompiled output"
-                subtitle="Sorbon reconstruction"
-                onChange={handleDecompiledFile}
-              />
-            </div>
-
-            <div className="paper-panel overflow-hidden rounded-[32px]">
-              <div className="border-b paper-border px-5 py-4">
-                <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="paper-panel rounded-[28px] p-5">
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <div className="text-[10px] uppercase tracking-[0.24em] text-[#a29a8d]">hello_world.rs</div>
-                    <div className="mt-2 text-lg text-[#171412]">Side-by-side diff review</div>
+                    <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Decompiled output</div>
+                    <div className="mt-2 text-sm text-[#72695e]">Upload .rs or decompile from .wasm</div>
                   </div>
-                  <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.18em]">
-                    <span className="rounded-full bg-[#78875b]/10 px-3 py-1 text-[#78875b]">
-                      {totalLines - changedCount} stable
-                    </span>
-                    <span className="rounded-full bg-[#f08b57]/10 px-3 py-1 text-[#f08b57]">
-                      {changedCount} changed
-                    </span>
+                  <div className="flex gap-2">
+                    <label className="cursor-pointer rounded-full border paper-border bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors">
+                      Upload .rs
+                      <input type="file" accept=".rs" onChange={handleDecompiledFile} className="hidden" />
+                    </label>
+                    <button
+                      onClick={() => wasmInputRef.current?.click()}
+                      disabled={decompiling}
+                      className="rounded-full border paper-border bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors disabled:opacity-50"
+                    >
+                      {decompiling ? 'Decompiling...' : 'From .wasm'}
+                    </button>
+                    <input ref={wasmInputRef} type="file" accept=".wasm" onChange={handleWasmFile} className="hidden" />
                   </div>
                 </div>
               </div>
-
-              <div className="grid xl:grid-cols-2">
-                <DiffColumn title="Original" lines={originalLines} otherLines={decompiledLines} />
-                <DiffColumn title="Decompiled" lines={decompiledLines} otherLines={originalLines} />
-              </div>
             </div>
+
+            {(originalText || decompiledText) && (
+              <div className="paper-panel overflow-hidden rounded-[32px]">
+                <div className="border-b paper-border px-5 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.24em] text-[#a29a8d]">diff review</div>
+                      <div className="mt-2 text-lg text-[#171412]">Side-by-side comparison</div>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.18em]">
+                      <span className="rounded-full bg-[#78875b]/10 px-3 py-1 text-[#78875b]">
+                        {totalLines - changedCount} stable
+                      </span>
+                      <span className="rounded-full bg-[#f08b57]/10 px-3 py-1 text-[#f08b57]">
+                        {changedCount} changed
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid xl:grid-cols-2">
+                  <DiffColumn title="Original" lines={originalLines} otherLines={decompiledLines} />
+                  <DiffColumn title="Decompiled" lines={decompiledLines} otherLines={originalLines} />
+                </div>
+              </div>
+            )}
           </div>
 
           <aside className="space-y-6">
             <div className="paper-panel rounded-[30px] p-5">
               <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Accuracy score</div>
-              {hasScore ? (
+              {scoreResult ? (
                 <div className="mt-5">
-                  <ScoreBar value={SCORE.overall} label="Overall" />
+                  <ScoreBar value={scoreResult.overall} label="Overall" />
                   <div className="my-4 h-px bg-[#e1d8cc]" />
-                  <ScoreBar value={SCORE.types} label="Types" weight="20%" />
-                  <ScoreBar value={SCORE.signatures} label="Signatures" weight="20%" />
-                  <ScoreBar value={SCORE.bodies} label="Bodies" weight="60%" />
+                  <ScoreBar value={scoreResult.types} label="Types" weight="20%" />
+                  <ScoreBar value={scoreResult.signatures} label="Signatures" weight="20%" />
+                  <ScoreBar value={scoreResult.bodies} label="Bodies" weight="60%" />
                 </div>
               ) : (
-                <p className="mt-4 text-sm text-[#8f8477]">Load or upload both files to generate the mock comparison view.</p>
+                <p className="mt-4 text-sm text-[#8f8477]">Upload both files and click "Run compare" to score accuracy using the AST benchmark.</p>
               )}
             </div>
 
-            <div className="paper-panel rounded-[30px] p-5">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Review notes</div>
-              <div className="mt-4 space-y-3">
-                <ReviewNote tone="good" title="Signatures preserved">
-                  The function boundary and return type are reconstructed correctly.
-                </ReviewNote>
-                <ReviewNote tone="warn" title="Literal reconstruction differs">
-                  `symbol_short!` became `Symbol::new`, which is valid but less exact.
-                </ReviewNote>
-                <ReviewNote tone="good" title="Contract structure stable">
-                  Contract and impl layout match the original source file.
-                </ReviewNote>
-              </div>
-            </div>
-
-            <div className="paper-panel rounded-[30px] p-5">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Per-function</div>
-              <div className="mt-4 space-y-3">
-                {SCORE.function_scores.map((item) => (
-                  <div key={item.name} className="rounded-2xl border paper-border bg-white/60 px-4 py-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-[#171412]">{item.name}</span>
-                      <span className="text-[10px] uppercase tracking-[0.18em] text-[#8f8477]">function</span>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <div className="text-[#a29a8d]">Signature</div>
-                        <div className="mt-1 font-medium text-[#171412]">{(item.signature * 100).toFixed(0)}%</div>
+            {scoreResult && scoreResult.function_scores.length > 0 && (
+              <div className="paper-panel rounded-[30px] p-5">
+                <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Per-function</div>
+                <div className="mt-4 space-y-3">
+                  {scoreResult.function_scores.map((item) => (
+                    <div key={item.name} className="rounded-2xl border paper-border bg-white/60 px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-[#171412]">{item.name}</span>
+                        <span className="text-[10px] uppercase tracking-[0.18em] text-[#8f8477]">function</span>
                       </div>
-                      <div>
-                        <div className="text-[#a29a8d]">Body</div>
-                        <div className="mt-1 font-medium text-[#171412]">{(item.body * 100).toFixed(0)}%</div>
+                      <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <div className="text-[#a29a8d]">Signature</div>
+                          <div className="mt-1 font-medium text-[#171412]">{(item.signature * 100).toFixed(0)}%</div>
+                        </div>
+                        <div>
+                          <div className="text-[#a29a8d]">Body</div>
+                          <div className="mt-1 font-medium text-[#171412]">{(item.body * 100).toFixed(0)}%</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </aside>
         </section>
       </div>
@@ -236,10 +235,12 @@ const Compare = () => {
 const UploadCard = ({
   title,
   subtitle,
+  accept,
   onChange,
 }: {
   title: string;
   subtitle: string;
+  accept: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }) => (
   <div className="paper-panel rounded-[28px] p-5">
@@ -249,8 +250,8 @@ const UploadCard = ({
         <div className="mt-2 text-sm text-[#72695e]">{subtitle}</div>
       </div>
       <label className="cursor-pointer rounded-full border paper-border bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors">
-        Upload .rs
-        <input type="file" accept=".rs" onChange={onChange} className="hidden" />
+        Upload {accept}
+        <input type="file" accept={accept} onChange={onChange} className="hidden" />
       </label>
     </div>
   </div>
@@ -268,23 +269,6 @@ const ScoreBar = ({ value, label, weight }: { value: number; label: string; weig
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#e8dfd3]">
       <div className={`h-full ${scoreColor(value)}`} style={{ width: `${value * 100}%` }} />
     </div>
-  </div>
-);
-
-const ReviewNote = ({
-  tone,
-  title,
-  children,
-}: {
-  tone: 'good' | 'warn';
-  title: string;
-  children: React.ReactNode;
-}) => (
-  <div className="rounded-2xl border paper-border bg-white/58 px-4 py-3">
-    <div className={`text-[10px] uppercase tracking-[0.18em] ${tone === 'good' ? 'text-[#78875b]' : 'text-[#f08b57]'}`}>
-      {title}
-    </div>
-    <p className="mt-2 text-sm leading-6 text-[#72695e]">{children}</p>
   </div>
 );
 

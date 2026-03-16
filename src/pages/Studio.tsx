@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { NETWORKS, MOCK_RUST_SOURCE, MOCK_SPEC, MOCK_IMPORTS } from '../data/contracts';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { NETWORKS, formatName } from '../data/contracts';
+import { useDecompiler, type SpecJson, type ImportsJson } from '../context/DecompilerContext';
 
 type Tab = 'rust' | 'host' | 'spec' | 'imports';
 
@@ -10,11 +12,55 @@ const TABS: { id: Tab; label: string; blurb: string }[] = [
   { id: 'imports', label: 'Raw Imports', blurb: 'Low-level wasm import table' },
 ];
 
+const EMPTY_SPEC: SpecJson = { wasm_size: 0, functions: [], structs: [], enums: [], errors: [], events: [] };
+const EMPTY_IMPORTS: ImportsJson = { total: 0, resolved: 0, unresolved: 0, imports: [] };
+
 const Studio = () => {
   const [activeTab, setActiveTab] = useState<Tab>('rust');
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [leftOpen, setLeftOpen] = useState(true);
   const [network, setNetwork] = useState(NETWORKS[0]?.value ?? 'testnet');
+  const [contractIdInput, setContractIdInput] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchParams] = useSearchParams();
+
+  const {
+    contractName,
+    rustSource,
+    specJson,
+    importsJson,
+    loading,
+    error,
+    loadFromUrl,
+    loadFromFile,
+    fetchFromRpc,
+  } = useDecompiler();
+
+  const spec = specJson ?? EMPTY_SPEC;
+  const imp = importsJson ?? EMPTY_IMPORTS;
+
+  // Auto-load from query params on mount
+  useEffect(() => {
+    const example = searchParams.get('example');
+    const id = searchParams.get('id');
+    const net = searchParams.get('network');
+
+    if (example && !rustSource) {
+      loadFromUrl(`/contracts/${example}.wasm`, formatName(example));
+    } else if (id && !rustSource) {
+      if (net) setNetwork(net);
+      fetchFromRpc(id, net ?? network);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file?.name.endsWith('.wasm')) await loadFromFile(file);
+  };
+
+  const handleFetch = async () => {
+    if (contractIdInput) await fetchFromRpc(contractIdInput, network);
+  };
 
   return (
     <div className="h-full overflow-hidden px-5 py-5 text-[#171412]">
@@ -24,14 +70,28 @@ const Studio = () => {
             <div>
               <div className="text-[10px] uppercase tracking-[0.28em] text-[#a29a8d]">Studio workspace</div>
               <div className="mt-3 flex items-center gap-3">
-                <h1 className="text-[2rem] leading-none text-[#171412]">hello_world</h1>
-                <span className="rounded-full border border-[#ddd4c8] bg-white/75 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[#8f8477]">
-                  660 B
-                </span>
+                <h1 className="text-[2rem] leading-none text-[#171412]">
+                  {contractName || 'No contract loaded'}
+                </h1>
+                {spec.wasm_size > 0 && (
+                  <span className="rounded-full border border-[#ddd4c8] bg-white/75 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[#8f8477]">
+                    {spec.wasm_size > 1024
+                      ? `${(spec.wasm_size / 1024).toFixed(1)} KB`
+                      : `${spec.wasm_size} B`}
+                  </span>
+                )}
+                {loading && (
+                  <span className="rounded-full border border-[#f08b57] bg-[#f08b57]/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[#f08b57]">
+                    Decompiling...
+                  </span>
+                )}
               </div>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-[#72695e]">
-                Inspect the decompiled contract, browse function structure, and move between host calls, spec output, and raw imports without leaving the workspace.
-              </p>
+              {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+              {!rustSource && !loading && (
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-[#72695e]">
+                  Upload a .wasm file, fetch a contract by ID, or pick one from the Gallery to get started.
+                </p>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-3">
@@ -41,10 +101,22 @@ const Studio = () => {
               >
                 {leftOpen ? 'Hide explorer' : 'Show explorer'}
               </button>
-              <button className="rounded-full border border-[#ddd4c8] bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="rounded-full border border-[#ddd4c8] bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors"
+              >
                 Upload new
               </button>
               <input
+                ref={fileInputRef}
+                type="file"
+                accept=".wasm"
+                onChange={handleUpload}
+                className="hidden"
+              />
+              <input
+                value={contractIdInput}
+                onChange={(e) => setContractIdInput(e.target.value)}
                 placeholder="Contract ID..."
                 className="paper-input w-44 rounded-full border px-4 py-2 text-sm outline-none placeholder:text-[#b4ab9e]"
               />
@@ -66,7 +138,11 @@ const Studio = () => {
                   </svg>
                 </span>
               </div>
-              <button className="rounded-full bg-[#171412] px-5 py-2 text-[10px] uppercase tracking-[0.22em] text-[#f8f3ea] hover:bg-[#f08b57] transition-colors">
+              <button
+                onClick={handleFetch}
+                disabled={!contractIdInput || loading}
+                className="rounded-full bg-[#171412] px-5 py-2 text-[10px] uppercase tracking-[0.22em] text-[#f8f3ea] hover:bg-[#f08b57] transition-colors disabled:opacity-50"
+              >
                 Fetch
               </button>
             </div>
@@ -81,8 +157,11 @@ const Studio = () => {
               </div>
               <div className="h-[calc(100%-57px)] overflow-y-auto px-5 py-5">
                 <ExplorerTimeline
+                  spec={spec}
+                  imports={imp}
                   selectedItem={selectedItem}
                   onSelectItem={setSelectedItem}
+                  contractName={contractName}
                 />
               </div>
             </aside>
@@ -111,10 +190,10 @@ const Studio = () => {
             </div>
 
             <div className="h-[calc(100%-87px)] overflow-auto bg-[#fdfbf7]">
-              {activeTab === 'rust' && <CodeView code={MOCK_RUST_SOURCE} />}
-              {activeTab === 'host' && <HostCallsView />}
-              {activeTab === 'spec' && <CodeView code={JSON.stringify(MOCK_SPEC, null, 2)} />}
-              {activeTab === 'imports' && <CodeView code={JSON.stringify(MOCK_IMPORTS, null, 2)} />}
+              {activeTab === 'rust' && <CodeView code={rustSource || '// No contract loaded. Upload a .wasm or fetch by contract ID.'} />}
+              {activeTab === 'host' && <HostCallsView imports={imp} />}
+              {activeTab === 'spec' && <CodeView code={specJson ? JSON.stringify(specJson, null, 2) : '{}'} />}
+              {activeTab === 'imports' && <CodeView code={importsJson ? JSON.stringify(importsJson, null, 2) : '{}'} />}
             </div>
           </section>
 
@@ -125,7 +204,7 @@ const Studio = () => {
             <div className="h-[calc(100%-57px)] overflow-y-auto px-5 py-5">
               {selectedItem ? (
                 <>
-                  {MOCK_SPEC.functions
+                  {spec.functions
                     .filter((item) => item.name === selectedItem)
                     .map((item) => (
                       <div key={item.name}>
@@ -150,16 +229,16 @@ const Studio = () => {
               ) : (
                 <div>
                   <Label>Contract</Label>
-                  <ValueBlock>hello_world</ValueBlock>
+                  <ValueBlock>{contractName || 'none'}</ValueBlock>
 
                   <div className="mt-6 space-y-0">
                     {[
-                      ['WASM Size', `${MOCK_SPEC.wasm_size} bytes`],
-                      ['Functions', String(MOCK_SPEC.functions.length)],
-                      ['Types', String(MOCK_SPEC.structs.length + MOCK_SPEC.enums.length)],
-                      ['Errors', String(MOCK_SPEC.errors.length)],
-                      ['Events', String(MOCK_SPEC.events.length)],
-                      ['Host Imports', `${MOCK_IMPORTS.total} (${MOCK_IMPORTS.resolved} resolved)`],
+                      ['WASM Size', spec.wasm_size > 0 ? `${spec.wasm_size} bytes` : '-'],
+                      ['Functions', String(spec.functions.length)],
+                      ['Types', String(spec.structs.length + spec.enums.length)],
+                      ['Errors', String(spec.errors.length)],
+                      ['Events', String(spec.events.length)],
+                      ['Host Imports', `${imp.total} (${imp.resolved} resolved)`],
                     ].map(([label, value]) => (
                       <div key={label} className="flex items-center justify-between border-b paper-border-soft py-3 text-xs">
                         <span className="text-[#a29a8d]">{label}</span>
@@ -188,29 +267,35 @@ const ValueBlock = ({ children }: { children: React.ReactNode }) => (
 );
 
 const ExplorerTimeline = ({
+  spec,
+  imports: imp,
   selectedItem,
   onSelectItem,
+  contractName,
 }: {
+  spec: SpecJson;
+  imports: ImportsJson;
   selectedItem: string | null;
   onSelectItem: (value: string | null) => void;
-}) => {
-  return (
-    <div className="relative pl-6">
-      <div className="absolute bottom-3 left-[10px] top-3 w-px bg-[#ddd4c8]" />
+  contractName: string;
+}) => (
+  <div className="relative pl-6">
+    <div className="absolute bottom-3 left-[10px] top-3 w-px bg-[#ddd4c8]" />
 
-      <TimelineGroup title="contract" tone="active">
-        <TimelineItem
-          title="hello_world"
-          subtitle="entry module / root export surface"
-          meta="root"
-          active={selectedItem === null}
-          tone="active"
-          onClick={() => onSelectItem(null)}
-        />
-      </TimelineGroup>
+    <TimelineGroup title="contract" tone="active">
+      <TimelineItem
+        title={contractName || 'none'}
+        subtitle="entry module / root export surface"
+        meta="root"
+        active={selectedItem === null}
+        tone="active"
+        onClick={() => onSelectItem(null)}
+      />
+    </TimelineGroup>
 
+    {spec.functions.length > 0 && (
       <TimelineGroup title="functions">
-        {MOCK_SPEC.functions.map((item, index) => (
+        {spec.functions.map((item, index) => (
           <TimelineItem
             key={item.name}
             title={item.name}
@@ -222,47 +307,47 @@ const ExplorerTimeline = ({
           />
         ))}
       </TimelineGroup>
+    )}
 
-      <TimelineGroup title="contract data">
-        <TimelineItem
-          title="types"
-          subtitle={`${MOCK_SPEC.structs.length + MOCK_SPEC.enums.length} recovered definitions`}
-          meta="spec"
-          active={false}
-          tone="muted"
-          onClick={() => {}}
-        />
-        <TimelineItem
-          title="errors"
-          subtitle={`${MOCK_SPEC.errors.length} recovered variants`}
-          meta="spec"
-          active={false}
-          tone="muted"
-          onClick={() => {}}
-        />
-        <TimelineItem
-          title="events"
-          subtitle={`${MOCK_SPEC.events.length} published schemas`}
-          meta="spec"
-          active={false}
-          tone="muted"
-          onClick={() => {}}
-        />
-      </TimelineGroup>
+    <TimelineGroup title="contract data">
+      <TimelineItem
+        title="types"
+        subtitle={`${spec.structs.length + spec.enums.length} recovered definitions`}
+        meta="spec"
+        active={false}
+        tone={spec.structs.length + spec.enums.length > 0 ? 'active' : 'muted'}
+        onClick={() => {}}
+      />
+      <TimelineItem
+        title="errors"
+        subtitle={`${spec.errors.length} recovered variants`}
+        meta="spec"
+        active={false}
+        tone={spec.errors.length > 0 ? 'active' : 'muted'}
+        onClick={() => {}}
+      />
+      <TimelineItem
+        title="events"
+        subtitle={`${spec.events.length} published schemas`}
+        meta="spec"
+        active={false}
+        tone={spec.events.length > 0 ? 'active' : 'muted'}
+        onClick={() => {}}
+      />
+    </TimelineGroup>
 
-      <TimelineGroup title="runtime">
-        <TimelineItem
-          title="host imports"
-          subtitle={`${MOCK_IMPORTS.resolved}/${MOCK_IMPORTS.total} resolved runtime calls`}
-          meta="host"
-          active={false}
-          tone="muted"
-          onClick={() => onSelectItem(null)}
-        />
-      </TimelineGroup>
-    </div>
-  );
-};
+    <TimelineGroup title="runtime">
+      <TimelineItem
+        title="host imports"
+        subtitle={`${imp.resolved}/${imp.total} resolved runtime calls`}
+        meta="host"
+        active={false}
+        tone={imp.resolved > 0 ? 'active' : 'muted'}
+        onClick={() => onSelectItem(null)}
+      />
+    </TimelineGroup>
+  </div>
+);
 
 const TimelineGroup = ({
   title,
@@ -397,9 +482,9 @@ const highlightRust = (line: string): React.ReactNode => {
   return <>{parts}</>;
 };
 
-const HostCallsView = () => {
+const HostCallsView = ({ imports: imp }: { imports: ImportsJson }) => {
   const [filter, setFilter] = useState('');
-  const filtered = MOCK_IMPORTS.imports.filter((item) =>
+  const filtered = imp.imports.filter((item) =>
     item.semantic_name.toLowerCase().includes(filter.toLowerCase())
   );
 
@@ -427,7 +512,7 @@ const HostCallsView = () => {
           </thead>
           <tbody>
             {filtered.map((item) => (
-              <tr key={item.semantic_name} className="border-t paper-border-soft hover:bg-[#f08b57]/[0.04]">
+              <tr key={`${item.module}-${item.field}`} className="border-t paper-border-soft hover:bg-[#f08b57]/[0.04]">
                 <td className="py-2.5 pr-4 font-medium text-[#171412]">{item.semantic_name}</td>
                 <td className="py-2.5 pr-4 text-[#78875b]">{item.semantic_module}</td>
                 <td className="py-2.5 pr-4 text-[#72695e]">{item.args.join(', ')}</td>

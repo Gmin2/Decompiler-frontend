@@ -14,7 +14,7 @@ import {
   type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { PATTERNS } from '../data/contracts';
+import { PATTERNS, PATTERN_CATEGORIES } from '../data/contracts';
 
 type FlowNodeData = {
   title: string;
@@ -260,37 +260,7 @@ const DocsCanvas = () => {
               </div>
             </div>
 
-            <div className="paper-panel rounded-[30px] p-5">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Host function extraction</div>
-              <div className="mt-4 space-y-3">
-                {PATTERNS.slice(0, 5).map((pattern) => (
-                  <div key={pattern.name} className="rounded-2xl border paper-border bg-white/58 px-4 py-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-medium text-[#171412]">{pattern.name}</div>
-                        <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[#a29a8d]">
-                          {pattern.module} / {pattern.category}
-                        </div>
-                      </div>
-                      <span
-                        className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.14em] ${
-                          pattern.status === 'handled'
-                            ? 'bg-[#78875b]/10 text-[#78875b]'
-                            : pattern.status === 'partial'
-                              ? 'bg-[#c4a35a]/10 text-[#c4a35a]'
-                              : 'bg-[#87605b]/10 text-[#87605b]'
-                        }`}
-                      >
-                        {pattern.status}
-                      </span>
-                    </div>
-                    <div className="mt-3 text-xs leading-6 text-[#72695e]">
-                      SDK pattern: <code className="text-[#f08b57]">{pattern.sdk}</code>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <HostPatternPanel />
 
             <div className="paper-panel rounded-[30px] p-5">
               <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Graph goals</div>
@@ -303,6 +273,86 @@ const DocsCanvas = () => {
             </div>
           </aside>
         </section>
+      </div>
+    </div>
+  );
+};
+
+const HostPatternPanel = () => {
+  const [category, setCategory] = useState<string>('all');
+  const [search, setSearch] = useState('');
+
+  const filtered = PATTERNS.filter((p) => {
+    if (category !== 'all' && p.category !== category) return false;
+    if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.sdk.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  return (
+    <div className="paper-panel rounded-[30px] p-5">
+      <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">
+        Host function catalog ({PATTERNS.length} patterns)
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <button
+          onClick={() => setCategory('all')}
+          className={`rounded-full px-2.5 py-1 text-[9px] uppercase tracking-[0.14em] transition-colors ${
+            category === 'all' ? 'bg-[#171412] text-[#f8f3ea]' : 'bg-white/60 text-[#72695e] hover:text-[#171412]'
+          }`}
+        >
+          All
+        </button>
+        {PATTERN_CATEGORIES.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setCategory(cat)}
+            className={`rounded-full px-2.5 py-1 text-[9px] uppercase tracking-[0.14em] transition-colors ${
+              category === cat ? 'bg-[#171412] text-[#f8f3ea]' : 'bg-white/60 text-[#72695e] hover:text-[#171412]'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search patterns..."
+        className="mt-3 w-full rounded-full border border-[#ddd4c8] bg-white/70 px-3 py-1.5 text-xs outline-none placeholder:text-[#b4ab9e] focus:border-[#f08b57]"
+      />
+      <div className="mt-3 max-h-[50vh] space-y-2.5 overflow-y-auto">
+        {filtered.map((pattern) => (
+          <div key={pattern.name} className="rounded-2xl border paper-border bg-white/58 px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-medium text-[#171412]">{pattern.name}</div>
+                <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[#a29a8d]">
+                  {pattern.module} / {pattern.category}
+                </div>
+              </div>
+              <span
+                className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.14em] ${
+                  pattern.status === 'handled'
+                    ? 'bg-[#78875b]/10 text-[#78875b]'
+                    : pattern.status === 'partial'
+                      ? 'bg-[#c4a35a]/10 text-[#c4a35a]'
+                      : 'bg-[#87605b]/10 text-[#87605b]'
+                }`}
+              >
+                {pattern.status}
+              </span>
+            </div>
+            <div className="mt-2 text-[11px] text-[#8f8477]">
+              {pattern.args} → {pattern.returnType}
+            </div>
+            <div className="mt-2 text-xs leading-6 text-[#72695e]">
+              SDK: <code className="text-[#f08b57]">{pattern.sdk}</code>
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="py-4 text-center text-xs text-[#a29a8d]">No patterns match</div>
+        )}
       </div>
     </div>
   );
