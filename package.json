@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@riverith/soroban-decompiler-wasm": "^0.2.4",
+    "@stellar/stellar-sdk": "^14.6.1",
     "@tailwindcss/vite": "^4.2.1",
     "@xyflow/react": "^12.10.1",
     "motion": "^12.36.0",

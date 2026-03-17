@@ -7,7 +7,7 @@ type SortKey = 'name' | 'size' | 'score';
 type ComplexityFilter = 'all' | 'simple' | 'medium' | 'complex';
 
 const ScoreBar = ({ value }: { value: number }) => (
-  <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#e8dfd3]">
+  <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-sand-track)]">
     <div
       className="h-full rounded-full bg-[linear-gradient(90deg,#f08b57_0%,#d39f69_45%,#80915f_100%)]"
       style={{ width: `${value * 100}%` }}
@@ -42,7 +42,7 @@ const Gallery = () => {
       <section className="px-[4vw] pb-8 pt-14">
         <div className="mb-10 flex items-start gap-4">
           <span
-            className="text-5xl font-light tracking-tighter text-[#b9b0a3]"
+            className="text-5xl font-light tracking-tighter text-[var(--color-ink-number)]"
             style={{ fontFamily: "'Playfair Display', serif" }}
           >
             04
@@ -57,7 +57,7 @@ const Gallery = () => {
         <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
           <div>
             <h1
-              className="max-w-3xl text-[clamp(2.4rem,4.8vw,4.6rem)] leading-[0.98] tracking-[-0.04em] text-[#171412]"
+              className="max-w-3xl text-[clamp(2.4rem,4.8vw,4.6rem)] leading-[0.98] tracking-[-0.04em] text-[var(--color-ink)]"
               style={{ fontFamily: "'Playfair Display', serif" }}
             >
               Browse bundled Soroban contracts and inspect reconstruction quality.
@@ -70,7 +70,7 @@ const Gallery = () => {
         </div>
       </section>
 
-      <div className="mx-[4vw] h-px bg-[#e1d8cc]" />
+      <div className="mx-[4vw] h-px bg-[var(--color-sand-divide)]" />
 
       <section className="flex flex-wrap items-center gap-6 px-[4vw] py-5">
         <input
@@ -78,7 +78,7 @@ const Gallery = () => {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search contracts..."
-          className="w-56 border-b bg-transparent py-2 text-sm paper-text outline-none transition-colors paper-border focus:border-[#f08b57]"
+          className="w-56 border-b bg-transparent py-2 text-sm paper-text outline-none transition-colors paper-border focus:border-[var(--color-accent)]"
         />
 
         <div className="flex items-center gap-2">
@@ -90,8 +90,8 @@ const Gallery = () => {
               onClick={() => setComplexity(item)}
               className={`border px-3 py-1 text-[10px] tracking-wider transition-colors ${
                 complexity === item
-                  ? 'border-[#f08b57] text-[#f08b57]'
-                  : 'paper-border paper-muted hover:border-[#d1c6b8] hover:text-[#171412]'
+                  ? 'border-[var(--color-accent)] text-[var(--color-accent)]'
+                  : 'paper-border paper-muted hover:border-[var(--color-sand-hover)] hover:text-[var(--color-ink)]'
               }`}
             >
               {item.toUpperCase()}
@@ -108,8 +108,8 @@ const Gallery = () => {
               onClick={() => setSort(item)}
               className={`border px-3 py-1 text-[10px] tracking-wider transition-colors ${
                 sort === item
-                  ? 'border-[#f08b57] text-[#f08b57]'
-                  : 'paper-border paper-muted hover:border-[#d1c6b8] hover:text-[#171412]'
+                  ? 'border-[var(--color-accent)] text-[var(--color-accent)]'
+                  : 'paper-border paper-muted hover:border-[var(--color-sand-hover)] hover:text-[var(--color-ink)]'
               }`}
             >
               {item.toUpperCase()}
@@ -122,7 +122,7 @@ const Gallery = () => {
         </span>
       </section>
 
-      <div className="mx-[4vw] h-px bg-[#e1d8cc]" />
+      <div className="mx-[4vw] h-px bg-[var(--color-sand-divide)]" />
 
       <section className="px-[4vw] py-8">
         <div className="rounded-[32px] border p-4 paper-border-soft hatch-fill-dense">
@@ -157,7 +157,7 @@ const GalleryCard = ({
 
   return (
     <div className="paper-panel group relative rounded-[28px] p-5">
-      <div className="absolute left-0 top-0 h-full w-0.5 origin-top scale-y-0 rounded-full bg-[#f08b57] transition-transform duration-200 group-hover:scale-y-100" />
+      <div className="absolute left-0 top-0 h-full w-0.5 origin-top scale-y-0 rounded-full bg-[var(--color-accent)] transition-transform duration-200 group-hover:scale-y-100" />
 
       <div className="mb-2 text-sm paper-text">{formatName(contract.name)}</div>
 
@@ -187,14 +187,14 @@ const GalleryCard = ({
           type="button"
           disabled={cardLoading}
           onClick={handleDecompile}
-          className="flex-1 rounded-full bg-[#171412] py-1.5 text-center text-[10px] tracking-wider text-[#f8f3ea] transition-colors hover:bg-[#f08b57] disabled:opacity-50"
+          className="flex-1 rounded-full bg-[var(--color-ink)] py-1.5 text-center text-[10px] tracking-wider text-[var(--color-sand-cream)] transition-colors hover:bg-[var(--color-accent)] disabled:opacity-50"
         >
           {cardLoading ? 'LOADING...' : 'DECOMPILE'}
         </button>
         <button
           type="button"
           onClick={() => navigate(`/compare?example=${contract.name}`)}
-          className="flex-1 rounded-full border py-1.5 text-center text-[10px] tracking-wider transition-colors paper-border paper-body hover:border-[#f08b57] hover:text-[#f08b57]"
+          className="flex-1 rounded-full border py-1.5 text-center text-[10px] tracking-wider transition-colors paper-border paper-body hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
         >
           COMPARE
         </button>

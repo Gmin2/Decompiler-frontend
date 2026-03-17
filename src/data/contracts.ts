@@ -37,9 +37,9 @@ export const formatName = (name: string) =>
   name.replace(/^soroban_/, '').replace(/_contract$/, '');
 
 export const COMPLEXITY_COLOR = {
-  simple: 'text-[#7b7d74]',
-  medium: 'text-[#78875b]',
-  complex: 'text-[#ff8c00]',
+  simple: 'text-[var(--color-complexity-simple)]',
+  medium: 'text-[var(--color-score-green)]',
+  complex: 'text-[var(--color-accent-alt)]',
 } as const;
 
 export const GALLERY_SCORES: Record<string, { overall: number; types: number; signatures: number; bodies: number; functions: string[] }> = {

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { NETWORKS, formatName } from '../data/contracts';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { NETWORKS, formatName, CONTRACTS } from '../data/contracts';
 import { useDecompiler, type SpecJson, type ImportsJson } from '../context/DecompilerContext';
+import WasmErrorDialog from '../components/WasmErrorDialog';
 
 type Tab = 'rust' | 'host' | 'spec' | 'imports';
 
@@ -23,6 +24,7 @@ const Studio = () => {
   const [contractIdInput, setContractIdInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const {
     contractName,
@@ -63,32 +65,42 @@ const Studio = () => {
   };
 
   return (
-    <div className="h-full overflow-hidden px-5 py-5 text-[#171412]">
+    <div className="h-full overflow-hidden px-5 py-5 text-[var(--color-ink)]">
       <div className="flex h-full flex-col gap-5">
         <header className="paper-panel rounded-[30px] px-6 py-5">
           <div className="flex items-start justify-between gap-6">
             <div>
-              <div className="text-[10px] uppercase tracking-[0.28em] text-[#a29a8d]">Studio workspace</div>
+              <div className="text-[10px] uppercase tracking-[0.28em] text-[var(--color-ink-label)]">Studio workspace</div>
               <div className="mt-3 flex items-center gap-3">
-                <h1 className="text-[2rem] leading-none text-[#171412]">
+                <h1 className="text-[2rem] leading-none text-[var(--color-ink)]">
                   {contractName || 'No contract loaded'}
                 </h1>
                 {spec.wasm_size > 0 && (
-                  <span className="rounded-full border border-[#ddd4c8] bg-white/75 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[#8f8477]">
+                  <span className="rounded-full border border-[var(--color-sand-border)] bg-[var(--color-surface)]/75 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[var(--color-ink-sub)]">
                     {spec.wasm_size > 1024
                       ? `${(spec.wasm_size / 1024).toFixed(1)} KB`
                       : `${spec.wasm_size} B`}
                   </span>
                 )}
                 {loading && (
-                  <span className="rounded-full border border-[#f08b57] bg-[#f08b57]/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[#f08b57]">
+                  <span className="rounded-full border border-[var(--color-accent)] bg-[var(--color-accent)]/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[var(--color-accent)]">
                     Decompiling...
                   </span>
                 )}
               </div>
-              {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+              {error && error !== 'WASM_STACK_OVERFLOW' && (
+                <p className="mt-2 text-sm text-red-500">{error}</p>
+              )}
+              {error === 'WASM_STACK_OVERFLOW' && (
+                <WasmErrorDialog
+                  error={error}
+                  contractName={contractName}
+                  wasmSize={spec?.wasm_size ?? null}
+                  onDismiss={() => {}}
+                />
+              )}
               {!rustSource && !loading && (
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-[#72695e]">
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--color-ink-body)]">
                   Upload a .wasm file, fetch a contract by ID, or pick one from the Gallery to get started.
                 </p>
               )}
@@ -97,13 +109,28 @@ const Studio = () => {
             <div className="flex flex-wrap items-center justify-end gap-3">
               <button
                 onClick={() => setLeftOpen(!leftOpen)}
-                className="rounded-full border border-[#ddd4c8] bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors"
+                className="rounded-full border border-[var(--color-sand-border)] bg-[var(--color-surface)]/70 px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-[var(--color-ink-body)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
               >
                 {leftOpen ? 'Hide explorer' : 'Show explorer'}
               </button>
+              {rustSource && (
+                <button
+                  onClick={() => {
+                    const match = CONTRACTS.find((c) => formatName(c.name) === contractName || c.name === contractName);
+                    if (match) {
+                      navigate(`/compare?example=${match.name}`);
+                    } else {
+                      navigate('/compare');
+                    }
+                  }}
+                  className="rounded-full bg-[var(--color-ink)] px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-[var(--color-sand-cream)] hover:bg-[var(--color-accent)] transition-colors"
+                >
+                  Benchmark
+                </button>
+              )}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded-full border border-[#ddd4c8] bg-white/70 px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors"
+                className="rounded-full border border-[var(--color-sand-border)] bg-[var(--color-surface)]/70 px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-[var(--color-ink-body)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
               >
                 Upload new
               </button>
@@ -118,7 +145,7 @@ const Studio = () => {
                 value={contractIdInput}
                 onChange={(e) => setContractIdInput(e.target.value)}
                 placeholder="Contract ID..."
-                className="paper-input w-44 rounded-full border px-4 py-2 text-sm outline-none placeholder:text-[#b4ab9e]"
+                className="paper-input w-44 rounded-full border px-4 py-2 text-sm outline-none placeholder:text-[var(--color-ink-dim)]"
               />
               <div className="relative">
                 <select
@@ -132,7 +159,7 @@ const Studio = () => {
                     </option>
                   ))}
                 </select>
-                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[#8f8477]">
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--color-ink-sub)]">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M6 9l6 6 6-6" />
                   </svg>
@@ -141,7 +168,7 @@ const Studio = () => {
               <button
                 onClick={handleFetch}
                 disabled={!contractIdInput || loading}
-                className="rounded-full bg-[#171412] px-5 py-2 text-[10px] uppercase tracking-[0.22em] text-[#f8f3ea] hover:bg-[#f08b57] transition-colors disabled:opacity-50"
+                className="rounded-full bg-[var(--color-ink)] px-5 py-2 text-[10px] uppercase tracking-[0.22em] text-[var(--color-sand-cream)] hover:bg-[var(--color-accent)] transition-colors disabled:opacity-50"
               >
                 Fetch
               </button>
@@ -153,7 +180,7 @@ const Studio = () => {
           {leftOpen && (
             <aside className="paper-panel min-h-0 overflow-hidden rounded-[28px]">
               <div className="border-b paper-border px-5 py-4">
-                <div className="text-[10px] uppercase tracking-[0.24em] text-[#a29a8d]">Contract explorer</div>
+                <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--color-ink-label)]">Contract explorer</div>
               </div>
               <div className="h-[calc(100%-57px)] overflow-y-auto px-5 py-5">
                 <ExplorerTimeline
@@ -176,20 +203,20 @@ const Studio = () => {
                     onClick={() => setActiveTab(tab.id)}
                     className={`rounded-full px-4 py-2 text-[11px] uppercase tracking-[0.16em] transition-colors ${
                       activeTab === tab.id
-                        ? 'bg-[#171412] text-[#f8f3ea]'
-                        : 'bg-white/70 text-[#72695e] hover:text-[#171412]'
+                        ? 'bg-[var(--color-ink)] text-[var(--color-sand-cream)]'
+                        : 'bg-[var(--color-surface)]/70 text-[var(--color-ink-body)] hover:text-[var(--color-ink)]'
                     }`}
                   >
                     {tab.label}
                   </button>
                 ))}
               </div>
-              <p className="mt-3 text-sm text-[#8f8477]">
+              <p className="mt-3 text-sm text-[var(--color-ink-sub)]">
                 {TABS.find((tab) => tab.id === activeTab)?.blurb}
               </p>
             </div>
 
-            <div className="h-[calc(100%-87px)] overflow-auto bg-[#fdfbf7]">
+            <div className="h-[calc(100%-87px)] overflow-auto bg-[var(--color-sand-code)]">
               {activeTab === 'rust' && <CodeView code={rustSource || '// No contract loaded.\n// Upload a .wasm file, fetch by contract ID,\n// or pick one from the Gallery.'} />}
               {activeTab === 'host' && <HostCallsView imports={imp} />}
               {activeTab === 'spec' && <CodeView code={specJson ? JSON.stringify(specJson, null, 2) : '{}'} />}
@@ -199,7 +226,7 @@ const Studio = () => {
 
           <aside className="paper-panel min-h-0 overflow-hidden rounded-[28px]">
             <div className="border-b paper-border px-5 py-4">
-              <div className="text-[10px] uppercase tracking-[0.24em] text-[#a29a8d]">Inspector</div>
+              <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--color-ink-label)]">Inspector</div>
             </div>
             <div className="h-[calc(100%-57px)] overflow-y-auto px-5 py-5">
               {selectedItem ? (
@@ -214,9 +241,9 @@ const Studio = () => {
                         <Label className="mt-5">Parameters</Label>
                         <div className="space-y-2">
                           {item.inputs.map((input) => (
-                            <div key={input.name} className="rounded-2xl border paper-border bg-white/60 px-4 py-3 text-xs">
-                              <div className="text-[#8f8477]">{input.name}</div>
-                              <div className="mt-1 font-medium text-[#171412]">{input.type}</div>
+                            <div key={input.name} className="rounded-2xl border paper-border bg-[var(--color-surface)]/60 px-4 py-3 text-xs">
+                              <div className="text-[var(--color-ink-sub)]">{input.name}</div>
+                              <div className="mt-1 font-medium text-[var(--color-ink)]">{input.type}</div>
                             </div>
                           ))}
                         </div>
@@ -241,8 +268,8 @@ const Studio = () => {
                       ['Host Imports', `${imp.total} (${imp.resolved} resolved)`],
                     ].map(([label, value]) => (
                       <div key={label} className="flex items-center justify-between border-b paper-border-soft py-3 text-xs">
-                        <span className="text-[#a29a8d]">{label}</span>
-                        <span className="font-medium text-[#171412] tabular-nums">{value}</span>
+                        <span className="text-[var(--color-ink-label)]">{label}</span>
+                        <span className="font-medium text-[var(--color-ink)] tabular-nums">{value}</span>
                       </div>
                     ))}
                   </div>
@@ -257,11 +284,11 @@ const Studio = () => {
 };
 
 const Label = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <div className={`mb-2 text-[10px] uppercase tracking-[0.22em] text-[#a29a8d] ${className}`}>{children}</div>
+  <div className={`mb-2 text-[10px] uppercase tracking-[0.22em] text-[var(--color-ink-label)] ${className}`}>{children}</div>
 );
 
 const ValueBlock = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-2xl border paper-border bg-white/60 px-4 py-3 text-sm font-medium text-[#171412]">
+  <div className="rounded-2xl border paper-border bg-[var(--color-surface)]/60 px-4 py-3 text-sm font-medium text-[var(--color-ink)]">
     {children}
   </div>
 );
@@ -280,7 +307,7 @@ const ExplorerTimeline = ({
   contractName: string;
 }) => (
   <div className="relative pl-6">
-    <div className="absolute bottom-3 left-[10px] top-3 w-px bg-[#ddd4c8]" />
+    <div className="absolute bottom-3 left-[10px] top-3 w-px bg-[var(--color-sand-border)]" />
 
     <TimelineGroup title="contract" tone="active">
       <TimelineItem
@@ -359,8 +386,8 @@ const TimelineGroup = ({
   children: React.ReactNode;
 }) => (
   <div className="relative pb-4">
-    <div className={`mb-2 flex items-center gap-3 ${tone === 'active' ? 'text-[#171412]' : 'text-[#72695e]'}`}>
-      <span className={`absolute left-[-20px] flex h-4 w-4 items-center justify-center ${tone === 'active' ? 'text-[#22c55e]' : 'text-[#d6cdc0]'}`}>
+    <div className={`mb-2 flex items-center gap-3 ${tone === 'active' ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-body)]'}`}>
+      <span className={`absolute left-[-20px] flex h-4 w-4 items-center justify-center ${tone === 'active' ? 'text-[var(--color-status-success)]' : 'text-[var(--color-sand-muted)]'}`}>
         <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l5 4-5 4V1z" /></svg>
       </span>
       <h3 className="text-[1.05rem] font-semibold capitalize tracking-[-0.02em]">{title}</h3>
@@ -388,26 +415,26 @@ const TimelineItem = ({
     type="button"
     onClick={onClick}
     className={`relative block w-full rounded-[18px] px-0 py-2 text-left transition-colors ${
-      active ? 'bg-white/70' : 'hover:bg-white/45'
+      active ? 'bg-[var(--color-surface)]/70' : 'hover:bg-[var(--color-surface)]/45'
     }`}
   >
     <span
       className={`absolute left-[-19px] top-[16px] flex h-3 w-3 items-center justify-center ${
-        tone === 'active' ? 'text-[#22c55e]' : 'text-[#d8d0c3]'
+        tone === 'active' ? 'text-[var(--color-status-success)]' : 'text-[var(--color-sand-rule)]'
       }`}
     >
       <svg width="7" height="7" viewBox="0 0 10 10" fill="currentColor"><path d="M3 1l5 4-5 4V1z" /></svg>
     </span>
     <div className="flex items-start justify-between gap-3 px-3">
       <div className="min-w-0">
-        <div className={`text-[0.98rem] font-semibold tracking-[-0.02em] ${active ? 'text-[#171412]' : 'text-[#3f382f]'}`}>
+        <div className={`text-[0.98rem] font-semibold tracking-[-0.02em] ${active ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-bold)]'}`}>
           {title}
         </div>
-        <div className="mt-1 text-[12px] leading-5 text-[#7e7468]">
+        <div className="mt-1 text-[12px] leading-5 text-[var(--color-ink-mid)]">
           {subtitle}
         </div>
       </div>
-      <span className="shrink-0 pt-0.5 text-[11px] text-[#b2a89b]">{meta}</span>
+      <span className="shrink-0 pt-0.5 text-[11px] text-[var(--color-ink-meta)]">{meta}</span>
     </div>
   </button>
 );
@@ -419,11 +446,11 @@ const CodeView = ({ code }: { code: string }) => {
     <div className="overflow-x-auto py-3 font-mono text-[13px] leading-7">
       <div className="min-w-fit">
         {lines.map((line, index) => (
-          <div key={index} className="flex px-1 hover:bg-[#f08b57]/[0.04]">
-            <span className="w-12 shrink-0 select-none pl-4 pr-5 text-right text-xs tabular-nums text-[#c8bfb2] leading-7">
+          <div key={index} className="flex px-1 hover:bg-[var(--color-accent)]/[0.04]">
+            <span className="w-12 shrink-0 select-none pl-4 pr-5 text-right text-xs tabular-nums text-[var(--color-ink-faint)] leading-7">
               {index + 1}
             </span>
-            <pre className="whitespace-pre text-[#544c43]">{highlightRust(line)}</pre>
+            <pre className="whitespace-pre text-[var(--color-ink-code)]">{highlightRust(line)}</pre>
           </div>
         ))}
       </div>
@@ -433,7 +460,7 @@ const CodeView = ({ code }: { code: string }) => {
 
 const highlightRust = (line: string): React.ReactNode => {
   if (line.trimStart().startsWith('//')) {
-    return <span className="text-[#b4ab9e] italic">{line}</span>;
+    return <span className="text-[var(--color-ink-dim)] italic">{line}</span>;
   }
 
   const parts: React.ReactNode[] = [];
@@ -447,11 +474,11 @@ const highlightRust = (line: string): React.ReactNode => {
 
   let match;
   for (const [regex, className] of [
-    [attrs, 'text-[#c4a35a]'],
-    [strings, 'text-[#f08b57]'],
-    [macros, 'text-[#78875b]'],
-    [keywords, 'text-[#78875b]'],
-    [types, 'text-[#171412] font-medium'],
+    [attrs, 'text-[var(--color-score-gold)]'],
+    [strings, 'text-[var(--color-accent)]'],
+    [macros, 'text-[var(--color-score-green)]'],
+    [keywords, 'text-[var(--color-score-green)]'],
+    [types, 'text-[var(--color-ink)] font-medium'],
   ] as [RegExp, string][]) {
     const runner = new RegExp(regex.source, regex.flags);
     while ((match = runner.exec(result)) !== null) {
@@ -501,13 +528,13 @@ const HostCallsView = ({ imports: imp }: { imports: ImportsJson }) => {
         value={filter}
         onChange={(event) => setFilter(event.target.value)}
         placeholder="Filter by name..."
-        className="paper-input mb-5 w-64 rounded-full border px-4 py-2 text-sm outline-none placeholder:text-[#b4ab9e]"
+        className="paper-input mb-5 w-64 rounded-full border px-4 py-2 text-sm outline-none placeholder:text-[var(--color-ink-dim)]"
       />
 
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-left text-[10px] uppercase tracking-[0.12em] text-[#a29a8d]">
+            <tr className="text-left text-[10px] uppercase tracking-[0.12em] text-[var(--color-ink-label)]">
               <th className="pb-3 pr-4 font-normal">Name</th>
               <th className="pb-3 pr-4 font-normal">Module</th>
               <th className="pb-3 pr-4 font-normal">Args</th>
@@ -518,13 +545,13 @@ const HostCallsView = ({ imports: imp }: { imports: ImportsJson }) => {
           </thead>
           <tbody>
             {filtered.map((item) => (
-              <tr key={`${item.module}-${item.field}`} className="border-t paper-border-soft hover:bg-[#f08b57]/[0.04]">
-                <td className="py-2.5 pr-4 font-medium text-[#171412]">{item.semantic_name}</td>
-                <td className="py-2.5 pr-4 text-[#78875b]">{item.semantic_module}</td>
-                <td className="py-2.5 pr-4 text-[#72695e]">{item.args.join(', ')}</td>
-                <td className="py-2.5 pr-4 text-[#171412]">{item.return_type}</td>
-                <td className="py-2.5 pr-4 text-[#b4ab9e]">{item.module}</td>
-                <td className="py-2.5 text-[#b4ab9e]">{item.field}</td>
+              <tr key={`${item.module}-${item.field}`} className="border-t paper-border-soft hover:bg-[var(--color-accent)]/[0.04]">
+                <td className="py-2.5 pr-4 font-medium text-[var(--color-ink)]">{item.semantic_name}</td>
+                <td className="py-2.5 pr-4 text-[var(--color-score-green)]">{item.semantic_module}</td>
+                <td className="py-2.5 pr-4 text-[var(--color-ink-body)]">{item.args.join(', ')}</td>
+                <td className="py-2.5 pr-4 text-[var(--color-ink)]">{item.return_type}</td>
+                <td className="py-2.5 pr-4 text-[var(--color-ink-dim)]">{item.module}</td>
+                <td className="py-2.5 text-[var(--color-ink-dim)]">{item.field}</td>
               </tr>
             ))}
           </tbody>

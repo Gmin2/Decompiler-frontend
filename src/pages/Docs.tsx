@@ -89,15 +89,15 @@ function buildGraph() {
 }
 
 const statusColors = {
-  handled: { bg: 'bg-[#78875b]/10', text: 'text-[#78875b]', border: 'border-[#78875b]/30' },
-  partial: { bg: 'bg-[#c4a35a]/10', text: 'text-[#c4a35a]', border: 'border-[#c4a35a]/30' },
-  unhandled: { bg: 'bg-[#87605b]/10', text: 'text-[#87605b]', border: 'border-[#87605b]/30' },
+  handled: { bg: 'bg-[var(--color-score-green)]/10', text: 'text-[var(--color-score-green)]', border: 'border-[var(--color-score-green)]/30' },
+  partial: { bg: 'bg-[var(--color-score-gold)]/10', text: 'text-[var(--color-score-gold)]', border: 'border-[var(--color-score-gold)]/30' },
+  unhandled: { bg: 'bg-[var(--color-score-rust)]/10', text: 'text-[var(--color-score-rust)]', border: 'border-[var(--color-score-rust)]/30' },
 };
 
 const kindStyles = {
-  center: 'w-[200px] bg-[#171412] text-[#f8f3ea] border-[#171412]',
-  category: 'w-[200px] bg-[#fffdf8] border-[#ddd4c8]',
-  pattern: 'w-[180px] bg-white/90 border-[#e8dfd3]',
+  center: 'w-[200px] bg-[var(--color-ink)] text-[var(--color-sand-cream)] border-[var(--color-ink)]',
+  category: 'w-[200px] bg-[var(--color-sand-white)] border-[var(--color-sand-border)]',
+  pattern: 'w-[180px] bg-[var(--color-surface)]/90 border-[var(--color-sand-track)]',
 };
 
 const CatalogNode = ({ data, selected }: NodeProps<Node<NodeData>>) => {
@@ -105,25 +105,25 @@ const CatalogNode = ({ data, selected }: NodeProps<Node<NodeData>>) => {
 
   return (
     <div className={`rounded-[18px] border px-4 py-3 text-left shadow-[0_8px_24px_rgba(58,46,30,0.04)] transition ${
-      selected ? 'ring-2 ring-[#f08b57]/40' : ''
+      selected ? 'ring-2 ring-[var(--color-accent)]/40' : ''
     } ${kindStyles[data.kind]}`}>
-      <Handle type="target" position={Position.Left} className="!h-2.5 !w-2.5 !border-2 !border-white !bg-[#d67a76]" />
+      <Handle type="target" position={Position.Left} className="!h-2.5 !w-2.5 !border-2 !border-white !bg-[var(--color-status-node)]" />
       {data.kind === 'center' ? (
         <>
-          <div className="text-[10px] uppercase tracking-[0.22em] text-[#f8f3ea]/60">host runtime</div>
+          <div className="text-[10px] uppercase tracking-[0.22em] text-[var(--color-sand-cream)]/60">host runtime</div>
           <div className="mt-1 text-sm font-medium">{data.label}</div>
-          {data.sublabel && <div className="mt-1 text-[10px] text-[#f8f3ea]/50">{data.sublabel}</div>}
+          {data.sublabel && <div className="mt-1 text-[10px] text-[var(--color-sand-cream)]/50">{data.sublabel}</div>}
         </>
       ) : data.kind === 'category' ? (
         <>
-          <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">category</div>
-          <div className="mt-1 text-sm font-medium text-[#171412]">{data.label}</div>
-          {data.sublabel && <div className="mt-1 text-[10px] text-[#8f8477]">{data.sublabel}</div>}
+          <div className="text-[10px] uppercase tracking-[0.22em] text-[var(--color-ink-label)]">category</div>
+          <div className="mt-1 text-sm font-medium text-[var(--color-ink)]">{data.label}</div>
+          {data.sublabel && <div className="mt-1 text-[10px] text-[var(--color-ink-sub)]">{data.sublabel}</div>}
         </>
       ) : (
         <>
           <div className="flex items-center justify-between gap-2">
-            <div className="truncate text-xs font-medium text-[#171412]">{data.label}</div>
+            <div className="truncate text-xs font-medium text-[var(--color-ink)]">{data.label}</div>
             {sc && (
               <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] ${sc.bg} ${sc.text}`}>
                 {data.status}
@@ -132,7 +132,7 @@ const CatalogNode = ({ data, selected }: NodeProps<Node<NodeData>>) => {
           </div>
         </>
       )}
-      <Handle type="source" position={Position.Right} className="!h-2.5 !w-2.5 !border-2 !border-white !bg-[#d67a76]" />
+      <Handle type="source" position={Position.Right} className="!h-2.5 !w-2.5 !border-2 !border-white !bg-[var(--color-status-node)]" />
     </div>
   );
 };
@@ -170,12 +170,12 @@ const DocsCanvas = () => {
               <div className="border-b paper-border px-5 py-4">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <div className="text-[10px] uppercase tracking-[0.24em] text-[#a29a8d]">Soroban host function map</div>
-                    <div className="mt-2 text-lg text-[#171412]">
+                    <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--color-ink-label)]">Soroban host function map</div>
+                    <div className="mt-2 text-lg text-[var(--color-ink)]">
                       {PATTERNS.length} patterns across {PATTERN_CATEGORIES.length} categories
                     </div>
                   </div>
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#8f8477]">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-ink-sub)]">
                     click a pattern node to inspect
                   </div>
                 </div>
@@ -199,26 +199,26 @@ const DocsCanvas = () => {
                   <Background color="#e9dfd3" gap={28} size={1} />
                   <Controls
                     showInteractive={false}
-                    className="[&>button]:!border-[#ddd4c8] [&>button]:!bg-white/90 [&>button]:!text-[#72695e]"
+                    className="[&>button]:!border-[var(--color-sand-border)] [&>button]:!bg-[var(--color-surface)]/90 [&>button]:!text-[var(--color-ink-body)]"
                   />
                 </ReactFlow>
               </div>
             </div>
 
             <div className="paper-panel rounded-[28px] p-6">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">Decompilation pipeline</div>
-              <div className="mt-2 text-sm text-[#72695e]">4-stage WASM to Rust reconstruction</div>
+              <div className="text-[10px] uppercase tracking-[0.22em] text-[var(--color-ink-label)]">Decompilation pipeline</div>
+              <div className="mt-2 text-sm text-[var(--color-ink-body)]">4-stage WASM to Rust reconstruction</div>
               <div className="mt-5 grid gap-4 xl:grid-cols-4">
                 {PIPELINE.map((item, i) => (
-                  <div key={item.step} className="rounded-2xl border paper-border bg-white/60 p-4">
+                  <div key={item.step} className="rounded-2xl border paper-border bg-[var(--color-surface)]/60 p-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#171412] text-[10px] text-[#f8f3ea]">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-ink)] text-[10px] text-[var(--color-sand-cream)]">
                         {i + 1}
                       </div>
-                      <div className="text-sm font-medium text-[#171412]">{item.step}</div>
+                      <div className="text-sm font-medium text-[var(--color-ink)]">{item.step}</div>
                     </div>
-                    <div className="mt-3 text-xs leading-5 text-[#72695e]">{item.detail}</div>
-                    <div className="mt-3 rounded-lg bg-[#171412]/5 px-2.5 py-1.5 text-[10px] font-mono text-[#8f8477]">
+                    <div className="mt-3 text-xs leading-5 text-[var(--color-ink-body)]">{item.detail}</div>
+                    <div className="mt-3 rounded-lg bg-[var(--color-ink)]/5 px-2.5 py-1.5 text-[10px] font-mono text-[var(--color-ink-sub)]">
                       → {item.output}
                     </div>
                   </div>
@@ -229,86 +229,86 @@ const DocsCanvas = () => {
 
           <aside className="space-y-6">
             <div className="paper-panel rounded-[30px] p-5">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-[#a29a8d]">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-[var(--color-ink-label)]">
                 {selectedPattern ? 'Pattern detail' : 'Inspector'}
               </div>
 
               {selectedPattern ? (
                 <div className="mt-4 space-y-4">
-                  <div className="rounded-2xl border paper-border bg-white/60 px-4 py-4">
+                  <div className="rounded-2xl border paper-border bg-[var(--color-surface)]/60 px-4 py-4">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-lg font-medium text-[#171412]">{selectedPattern.name}</div>
+                      <div className="text-lg font-medium text-[var(--color-ink)]">{selectedPattern.name}</div>
                       <span className={`rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] ${
                         statusColors[selectedPattern.status].bg
                       } ${statusColors[selectedPattern.status].text}`}>
                         {selectedPattern.status}
                       </span>
                     </div>
-                    <div className="mt-2 text-[11px] uppercase tracking-[0.16em] text-[#a29a8d]">
+                    <div className="mt-2 text-[11px] uppercase tracking-[0.16em] text-[var(--color-ink-label)]">
                       {selectedPattern.module} / {selectedPattern.category}
                     </div>
                   </div>
 
                   <div>
-                    <div className="text-[10px] uppercase tracking-[0.18em] text-[#a29a8d] mb-2">Arguments</div>
-                    <div className="rounded-2xl border paper-border bg-white/60 px-4 py-3 font-mono text-xs text-[#544c43]">
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-ink-label)] mb-2">Arguments</div>
+                    <div className="rounded-2xl border paper-border bg-[var(--color-surface)]/60 px-4 py-3 font-mono text-xs text-[var(--color-ink-code)]">
                       {selectedPattern.args || '(none)'}
                     </div>
                   </div>
 
                   <div>
-                    <div className="text-[10px] uppercase tracking-[0.18em] text-[#a29a8d] mb-2">Return type</div>
-                    <div className="rounded-2xl border paper-border bg-white/60 px-4 py-3 font-mono text-xs text-[#544c43]">
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-ink-label)] mb-2">Return type</div>
+                    <div className="rounded-2xl border paper-border bg-[var(--color-surface)]/60 px-4 py-3 font-mono text-xs text-[var(--color-ink-code)]">
                       {selectedPattern.returnType}
                     </div>
                   </div>
 
                   <div>
-                    <div className="text-[10px] uppercase tracking-[0.18em] text-[#a29a8d] mb-2">SDK equivalent</div>
-                    <div className="rounded-2xl border border-[#f08b57]/20 bg-[#f08b57]/[0.04] px-4 py-3 font-mono text-xs text-[#f08b57]">
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-ink-label)] mb-2">SDK equivalent</div>
+                    <div className="rounded-2xl border border-[var(--color-accent)]/20 bg-[var(--color-accent)]/[0.04] px-4 py-3 font-mono text-xs text-[var(--color-accent)]">
                       {selectedPattern.sdk}
                     </div>
                   </div>
 
                   <button
                     onClick={() => setSelectedPattern(null)}
-                    className="w-full rounded-full border paper-border py-2 text-[10px] uppercase tracking-[0.18em] text-[#72695e] hover:border-[#f08b57] hover:text-[#f08b57] transition-colors"
+                    className="w-full rounded-full border paper-border py-2 text-[10px] uppercase tracking-[0.18em] text-[var(--color-ink-body)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors"
                   >
                     Clear selection
                   </button>
                 </div>
               ) : (
                 <div className="mt-4">
-                  <p className="text-sm leading-7 text-[#72695e]">
+                  <p className="text-sm leading-7 text-[var(--color-ink-body)]">
                     Click any pattern node in the graph to see its host function signature, arguments, return type, and SDK equivalent.
                   </p>
                   <div className="mt-5 space-y-3">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-[#72695e]">Total patterns</span>
-                      <span className="font-medium text-[#171412] tabular-nums">{PATTERNS.length}</span>
+                      <span className="text-[var(--color-ink-body)]">Total patterns</span>
+                      <span className="font-medium text-[var(--color-ink)] tabular-nums">{PATTERNS.length}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-[#72695e]">Handled</span>
-                      <span className="font-medium text-[#78875b] tabular-nums">{PATTERNS.filter((p) => p.status === 'handled').length}</span>
+                      <span className="text-[var(--color-ink-body)]">Handled</span>
+                      <span className="font-medium text-[var(--color-score-green)] tabular-nums">{PATTERNS.filter((p) => p.status === 'handled').length}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-[#72695e]">Partial</span>
-                      <span className="font-medium text-[#c4a35a] tabular-nums">{PATTERNS.filter((p) => p.status === 'partial').length}</span>
+                      <span className="text-[var(--color-ink-body)]">Partial</span>
+                      <span className="font-medium text-[var(--color-score-gold)] tabular-nums">{PATTERNS.filter((p) => p.status === 'partial').length}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-[#72695e]">Categories</span>
-                      <span className="font-medium text-[#171412] tabular-nums">{PATTERN_CATEGORIES.length}</span>
+                      <span className="text-[var(--color-ink-body)]">Categories</span>
+                      <span className="font-medium text-[var(--color-ink)] tabular-nums">{PATTERN_CATEGORIES.length}</span>
                     </div>
                   </div>
 
-                  <div className="mt-6 text-[10px] uppercase tracking-[0.18em] text-[#a29a8d] mb-3">By category</div>
+                  <div className="mt-6 text-[10px] uppercase tracking-[0.18em] text-[var(--color-ink-label)] mb-3">By category</div>
                   {PATTERN_CATEGORIES.map((cat) => {
                     const inCat = PATTERNS.filter((p) => p.category === cat);
                     const handled = inCat.filter((p) => p.status === 'handled').length;
                     return (
                       <div key={cat} className="flex items-center justify-between border-b paper-border-soft py-2 text-xs">
-                        <span className="text-[#72695e]">{cat}</span>
-                        <span className="tabular-nums text-[#171412]">{handled}/{inCat.length}</span>
+                        <span className="text-[var(--color-ink-body)]">{cat}</span>
+                        <span className="tabular-nums text-[var(--color-ink)]">{handled}/{inCat.length}</span>
                       </div>
                     );
                   })}

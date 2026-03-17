@@ -41,9 +41,9 @@ const SketchBadge = ({
 }) => (
   <div className={`pointer-events-none absolute hidden lg:block ${className}`}>
     <div className="sketch-badge rounded-[28px] px-5 py-4">
-      <div className="mb-3 text-[10px] uppercase tracking-[0.28em] text-[#a39a8e]">{title}</div>
+      <div className="mb-3 text-[10px] uppercase tracking-[0.28em] text-[var(--color-ink-tag)]">{title}</div>
       <div className="flex items-center justify-center">{children}</div>
-      <div className="mt-3 text-[9px] uppercase tracking-[0.24em] text-[#b0a698]">{subtitle}</div>
+      <div className="mt-3 text-[9px] uppercase tracking-[0.24em] text-[var(--color-ink-caption)]">{subtitle}</div>
     </div>
   </div>
 );
@@ -91,7 +91,7 @@ const CodeStrip = ({
   className: string;
 }) => (
   <div
-    className={`pointer-events-none absolute hidden rounded-[24px] border border-[#e5ddd0] bg-white/30 px-4 py-3 text-[10px] leading-6 tracking-[0.16em] text-[#a1988b] shadow-[0_10px_24px_rgba(45,34,20,0.04)] backdrop-blur-[2px] lg:block ${className}`}
+    className={`pointer-events-none absolute hidden rounded-[24px] border border-[var(--color-sand-float)] bg-[var(--color-surface)]/30 px-4 py-3 text-[10px] leading-6 tracking-[0.16em] text-[var(--color-ink-label)] shadow-[0_10px_24px_rgba(45,34,20,0.04)] backdrop-blur-[2px] lg:block ${className}`}
   >
     {lines.map((line) => (
       <div key={line}>{line}</div>
@@ -103,23 +103,23 @@ const DraftRing = () => (
   <>
     <div className="draft-ring absolute left-1/2 top-1/2 h-[280px] w-[280px] -translate-x-1/2 -translate-y-1/2 rounded-full" />
     <div className="draft-ring absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-35" />
-    <div className="absolute left-1/2 top-[26%] h-[44%] w-px -translate-x-1/2 bg-[#d8d1c3]" />
-    <div className="absolute left-[22%] top-1/2 h-px w-[56%] -translate-y-1/2 bg-[#d8d1c3]" />
-    <div className="absolute left-[28%] top-[38%] h-px w-[44%] bg-[#e4ddd1]" />
-    <div className="absolute left-[28%] top-[62%] h-px w-[44%] bg-[#e4ddd1]" />
-    <div className="absolute left-[50%] top-[13%] h-5 w-5 -translate-x-1/2 text-[#c8c1b5]">
+    <div className="absolute left-1/2 top-[26%] h-[44%] w-px -translate-x-1/2 bg-[var(--color-sand-rule)]" />
+    <div className="absolute left-[22%] top-1/2 h-px w-[56%] -translate-y-1/2 bg-[var(--color-sand-rule)]" />
+    <div className="absolute left-[28%] top-[38%] h-px w-[44%] bg-[var(--color-sand-soft)]" />
+    <div className="absolute left-[28%] top-[62%] h-px w-[44%] bg-[var(--color-sand-soft)]" />
+    <div className="absolute left-[50%] top-[13%] h-5 w-5 -translate-x-1/2 text-[var(--color-ink-guide)]">
       <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-current" />
       <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-current" />
     </div>
-    <div className="absolute bottom-[12%] left-1/2 h-5 w-5 -translate-x-1/2 text-[#c8c1b5]">
+    <div className="absolute bottom-[12%] left-1/2 h-5 w-5 -translate-x-1/2 text-[var(--color-ink-guide)]">
       <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-current" />
       <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-current" />
     </div>
-    <div className="absolute left-[31%] top-1/2 h-5 w-5 -translate-y-1/2 text-[#f08b57]">
+    <div className="absolute left-[31%] top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--color-accent)]">
       <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-current" />
       <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-current" />
     </div>
-    <div className="absolute right-[31%] top-1/2 h-5 w-5 -translate-y-1/2 text-[#f08b57]">
+    <div className="absolute right-[31%] top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--color-accent)]">
       <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-current" />
       <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-current" />
     </div>
@@ -170,7 +170,7 @@ const Landing = () => {
   };
 
   return (
-    <div className="landing-paper text-[#2f2a24]">
+    <div className="landing-paper text-[var(--color-ink-deep)]">
       <section className="relative isolate overflow-hidden px-6 pb-16 pt-8 sm:px-10 lg:px-16">
         <CodeStrip lines={codeColumnLeft} className="left-[2%] top-[16%] -rotate-6" />
         <CodeStrip lines={codeColumnRight} className="right-[2%] top-[58%] rotate-4 text-right" />
@@ -194,7 +194,7 @@ const Landing = () => {
         {opcodeMarkers.map((marker) => (
           <div
             key={marker.label}
-            className={`pointer-events-none absolute hidden rounded-full border border-[#e4dacc] bg-white/55 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-[#9e9487] md:block ${marker.className}`}
+            className={`pointer-events-none absolute hidden rounded-full border border-[var(--color-sand-marker)] bg-[var(--color-surface)]/55 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-[var(--color-ink-marker)] md:block ${marker.className}`}
           >
             {marker.label}
           </div>
@@ -218,13 +218,13 @@ const Landing = () => {
               <DraftRing />
 
               <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center text-center" style={{ background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.3) 40%, transparent 70%)' }}>
-                <h1 className="hero-wordmark text-[clamp(3.5rem,10vw,7.8rem)] leading-[0.92] tracking-[-0.05em] text-[#171412]">
+                <h1 className="hero-wordmark text-[clamp(3.5rem,10vw,7.8rem)] leading-[0.92] tracking-[-0.05em] text-[var(--color-ink)]">
                   Soroban
                 </h1>
-                <span className="hero-wordmark text-[clamp(1.8rem,5vw,4rem)] leading-[0.92] tracking-[-0.05em] text-[#171412]">
+                <span className="hero-wordmark text-[clamp(1.8rem,5vw,4rem)] leading-[0.92] tracking-[-0.05em] text-[var(--color-ink)]">
                   Decompiler
                 </span>
-                <p className="mt-6 max-w-md text-sm leading-relaxed text-[#7d7468]">
+                <p className="mt-6 max-w-md text-sm leading-relaxed text-[var(--color-ink-mid)]">
                   Turn any Soroban contract binary into readable Rust — instantly, in your browser.
                 </p>
 
@@ -233,7 +233,7 @@ const Landing = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/studio')}
-                    className="inline-flex h-12 items-center justify-center rounded-full bg-[#f08b57] px-8 text-[11px] uppercase tracking-[0.28em] text-white transition hover:bg-[#e07a46]"
+                    className="inline-flex h-12 items-center justify-center rounded-full bg-[var(--color-accent)] px-8 text-[11px] uppercase tracking-[0.28em] text-white transition hover:bg-[var(--color-accent-hover)]"
                   >
                     Open Studio
                   </button>
@@ -243,21 +243,21 @@ const Landing = () => {
                       const dropCard = document.querySelector('.action-draft-card');
                       dropCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }}
-                    className="inline-flex h-12 items-center justify-center rounded-full border border-[#171412] bg-white/70 px-8 text-[11px] uppercase tracking-[0.28em] text-[#171412] transition hover:border-[#f08b57] hover:text-[#f08b57]"
+                    className="inline-flex h-12 items-center justify-center rounded-full border border-[var(--color-ink)] bg-[var(--color-surface)]/70 px-8 text-[11px] uppercase tracking-[0.28em] text-[var(--color-ink)] transition hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
                   >
                     Drop a Wasm
                   </button>
                 </div>
 
                 {/* Tag pills */}
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-[0.2em] text-[#4a4239]">
-                  <span className="rounded-full border border-[#b8ad9e] bg-white/80 px-4 py-2 shadow-sm">
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-[0.2em] text-[var(--color-ink-strong)]">
+                  <span className="rounded-full border border-[var(--color-ink-badge)] bg-[var(--color-surface)]/80 px-4 py-2 shadow-sm">
                     Wasm uploads
                   </span>
-                  <span className="rounded-full border border-[#b8ad9e] bg-white/80 px-4 py-2 shadow-sm">
+                  <span className="rounded-full border border-[var(--color-ink-badge)] bg-[var(--color-surface)]/80 px-4 py-2 shadow-sm">
                     Contract fetch
                   </span>
-                  <span className="rounded-full border border-[#b8ad9e] bg-white/80 px-4 py-2 shadow-sm">
+                  <span className="rounded-full border border-[var(--color-ink-badge)] bg-[var(--color-surface)]/80 px-4 py-2 shadow-sm">
                     Compare output
                   </span>
                 </div>
@@ -270,7 +270,7 @@ const Landing = () => {
             <div className="relative grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
               <div
                 className={`action-draft-card group relative overflow-hidden p-6 sm:p-8 ${
-                  dragOver ? 'ring-1 ring-[#f08b57]' : ''
+                  dragOver ? 'ring-1 ring-[var(--color-accent)]' : ''
                 }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -287,31 +287,31 @@ const Landing = () => {
                   className="hidden"
                 />
                 <span className="section-kicker relative z-10">Upload binary</span>
-                <h2 className="relative z-10 mt-4 text-[clamp(2rem,3.6vw,3rem)] leading-[1.08] text-[#171412]">
+                <h2 className="relative z-10 mt-4 text-[clamp(2rem,3.6vw,3rem)] leading-[1.08] text-[var(--color-ink)]">
                   Drop a Wasm
                 </h2>
-                <p className="relative z-10 mt-4 max-w-lg text-sm leading-7 text-[#72695e]">
+                <p className="relative z-10 mt-4 max-w-lg text-sm leading-7 text-[var(--color-ink-body)]">
                   Start from the compiled contract artifact and push it directly into the decompiler pipeline.
                 </p>
 
                 <div
                   className={`action-dropzone relative z-10 mt-6 rounded-[30px] p-5 sm:p-6 ${
-                    dragOver ? 'border-[#f08b57] bg-[#fff9f2]' : ''
+                    dragOver ? 'border-[var(--color-accent)] bg-[var(--color-sand-warm)]' : ''
                   }`}
                 >
                   {selectedFile ? (
                     <div className="action-dropzone__frame flex min-h-[220px] flex-col items-center justify-center rounded-[24px] px-6 py-8 text-center sm:min-h-[250px]">
-                      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[22px] border border-[#d7c8b8] bg-white/82">
-                        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" className="text-[#171412]">
+                      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[22px] border border-[var(--color-sand-frame)] bg-[var(--color-surface)]/82">
+                        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" className="text-[var(--color-ink)]">
                           <path d="M12 6.5h9l5 5V29a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.6" />
                           <path d="M21 6.5v6h6" stroke="currentColor" strokeWidth="1.6" />
                           <path d="M19 24V14" stroke="#f08b57" strokeWidth="1.8" strokeLinecap="round" />
                           <path d="M15.5 17.5 19 14l3.5 3.5" stroke="#f08b57" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </div>
-                      <p className="mt-4 text-[10px] uppercase tracking-[0.3em] text-[#aa9f92]">artifact loaded</p>
-                      <p className="mt-3 text-[clamp(1.4rem,2.5vw,2rem)] leading-tight text-[#171412]">{selectedFile.name}</p>
-                      <p className="mt-2 text-sm text-[#7d7468]">
+                      <p className="mt-4 text-[10px] uppercase tracking-[0.3em] text-[var(--color-ink-muted)]">artifact loaded</p>
+                      <p className="mt-3 text-[clamp(1.4rem,2.5vw,2rem)] leading-tight text-[var(--color-ink)]">{selectedFile.name}</p>
+                      <p className="mt-2 text-sm text-[var(--color-ink-mid)]">
                         {(selectedFile.size / 1024).toFixed(1)} KB ready for decompilation
                       </p>
                       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -322,7 +322,7 @@ const Landing = () => {
                             event.stopPropagation();
                             handleDecompile();
                           }}
-                          className="inline-flex h-12 items-center justify-center rounded-full bg-[#171412] px-6 text-[11px] uppercase tracking-[0.28em] text-[#f8f3ea] transition hover:bg-[#f08b57] disabled:opacity-50"
+                          className="inline-flex h-12 items-center justify-center rounded-full bg-[var(--color-ink)] px-6 text-[11px] uppercase tracking-[0.28em] text-[var(--color-sand-cream)] transition hover:bg-[var(--color-accent)] disabled:opacity-50"
                         >
                           {loading ? 'Decompiling...' : 'Decompile now'}
                         </button>
@@ -332,7 +332,7 @@ const Landing = () => {
                             event.stopPropagation();
                             fileInputRef.current?.click();
                           }}
-                          className="inline-flex h-12 items-center justify-center rounded-full border border-[#171412] bg-white/70 px-6 text-[11px] uppercase tracking-[0.28em] text-[#171412]"
+                          className="inline-flex h-12 items-center justify-center rounded-full border border-[var(--color-ink)] bg-[var(--color-surface)]/70 px-6 text-[11px] uppercase tracking-[0.28em] text-[var(--color-ink)]"
                         >
                           Replace file
                         </button>
@@ -341,24 +341,24 @@ const Landing = () => {
                   ) : (
                     <div className="action-dropzone__frame flex min-h-[220px] items-center justify-center rounded-[24px] px-4 py-8 text-center sm:min-h-[250px]">
                       <div className="mx-auto max-w-xs">
-                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[22px] border border-[#d7c8b8] bg-white/82">
-                          <svg width="38" height="38" viewBox="0 0 38 38" fill="none" className="text-[#171412]">
+                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[22px] border border-[var(--color-sand-frame)] bg-[var(--color-surface)]/82">
+                          <svg width="38" height="38" viewBox="0 0 38 38" fill="none" className="text-[var(--color-ink)]">
                             <path d="M12 6.5h9l5 5V29a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.6" />
                             <path d="M21 6.5v6h6" stroke="currentColor" strokeWidth="1.6" />
                             <path d="M19 24V14" stroke="#f08b57" strokeWidth="1.8" strokeLinecap="round" />
                             <path d="M15.5 17.5 19 14l3.5 3.5" stroke="#f08b57" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </div>
-                        <p className="mt-5 text-[10px] uppercase tracking-[0.3em] text-[#aa9f92]">drop target</p>
-                        <p className="mt-3 text-[clamp(1.7rem,3vw,2.4rem)] leading-tight text-[#171412]">Drop a Wasm</p>
-                        <p className="mt-2 text-sm text-[#7d7468]">Drag the file into this center box or click anywhere to browse.</p>
+                        <p className="mt-5 text-[10px] uppercase tracking-[0.3em] text-[var(--color-ink-muted)]">drop target</p>
+                        <p className="mt-3 text-[clamp(1.7rem,3vw,2.4rem)] leading-tight text-[var(--color-ink)]">Drop a Wasm</p>
+                        <p className="mt-2 text-sm text-[var(--color-ink-mid)]">Drag the file into this center box or click anywhere to browse.</p>
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
                             fileInputRef.current?.click();
                           }}
-                          className="mt-5 inline-flex h-11 items-center justify-center rounded-full border border-[#171412] bg-white/75 px-5 text-[11px] uppercase tracking-[0.24em] text-[#171412]"
+                          className="mt-5 inline-flex h-11 items-center justify-center rounded-full border border-[var(--color-ink)] bg-[var(--color-surface)]/75 px-5 text-[11px] uppercase tracking-[0.24em] text-[var(--color-ink)]"
                         >
                           Browse `.wasm`
                         </button>
@@ -372,15 +372,15 @@ const Landing = () => {
                 <div className="action-draft-card__outline pointer-events-none absolute inset-0" />
                 <div className="action-draft-card__inner pointer-events-none absolute inset-[18px]" />
                 <span className="section-kicker relative z-10">Fetch contract</span>
-                <h2 className="relative z-10 mt-4 text-[clamp(2rem,3.6vw,3rem)] leading-[1.08] text-[#171412]">
+                <h2 className="relative z-10 mt-4 text-[clamp(2rem,3.6vw,3rem)] leading-[1.08] text-[var(--color-ink)]">
                   Pull a live contract
                 </h2>
-                <p className="relative z-10 mt-3 text-sm leading-7 text-[#72695e]">
+                <p className="relative z-10 mt-3 text-sm leading-7 text-[var(--color-ink-body)]">
                   Pull a deployed contract into the studio and inspect its reconstructed source flow.
                 </p>
                 <div className="relative z-10 mt-8 space-y-5">
                   <label className="block">
-                    <span className="mb-2 block text-[11px] uppercase tracking-[0.22em] text-[#a29a8d]">
+                    <span className="mb-2 block text-[11px] uppercase tracking-[0.22em] text-[var(--color-ink-label)]">
                       Contract id
                     </span>
                     <input
@@ -388,17 +388,17 @@ const Landing = () => {
                       value={contractId}
                       onChange={(event) => setContractId(event.target.value)}
                       placeholder="CABC...XYZ"
-                      className="w-full rounded-full border border-[#ddd4c8] bg-white/78 px-5 py-3 text-sm text-[#171412] outline-none transition placeholder:text-[#b4ab9e] focus:border-[#f08b57]"
+                      className="w-full rounded-full border border-[var(--color-sand-border)] bg-[var(--color-surface)]/78 px-5 py-3 text-sm text-[var(--color-ink)] outline-none transition placeholder:text-[var(--color-ink-dim)] focus:border-[var(--color-accent)]"
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-2 block text-[11px] uppercase tracking-[0.22em] text-[#a29a8d]">
+                    <span className="mb-2 block text-[11px] uppercase tracking-[0.22em] text-[var(--color-ink-label)]">
                       Network
                     </span>
                     <select
                       value={network}
                       onChange={(event) => setNetwork(event.target.value)}
-                      className="w-full rounded-full border border-[#ddd4c8] bg-white/78 px-5 py-3 text-sm text-[#171412] outline-none transition focus:border-[#f08b57]"
+                      className="w-full rounded-full border border-[var(--color-sand-border)] bg-[var(--color-surface)]/78 px-5 py-3 text-sm text-[var(--color-ink)] outline-none transition focus:border-[var(--color-accent)]"
                     >
                       {NETWORKS.map((item) => (
                         <option key={item.value} value={item.value}>
@@ -411,11 +411,11 @@ const Landing = () => {
                     type="button"
                     disabled={fetchLoading || !contractId}
                     onClick={handleFetchContract}
-                    className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[#171412] px-6 text-[11px] uppercase tracking-[0.28em] text-[#f8f3ea] transition hover:bg-[#f08b57] disabled:opacity-50"
+                    className="inline-flex h-12 w-full items-center justify-center rounded-full bg-[var(--color-ink)] px-6 text-[11px] uppercase tracking-[0.28em] text-[var(--color-sand-cream)] transition hover:bg-[var(--color-accent)] disabled:opacity-50"
                   >
                     {fetchLoading ? 'Fetching...' : 'Open in studio'}
                   </button>
-                  <div className="rounded-[24px] border border-[#e7ded2] bg-white/54 px-4 py-4 text-[11px] uppercase tracking-[0.24em] text-[#9d9387]">
+                  <div className="rounded-[24px] border border-[var(--color-sand-card)] bg-[var(--color-surface)]/54 px-4 py-4 text-[11px] uppercase tracking-[0.24em] text-[var(--color-ink-marker)]">
                     on-chain lookup / contract id / network route
                   </div>
                 </div>

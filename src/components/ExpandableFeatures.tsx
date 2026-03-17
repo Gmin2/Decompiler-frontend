@@ -163,11 +163,11 @@ const ExpandableFeatures = () => {
           <div className="relative mb-14 grid items-end gap-4 md:grid-cols-2">
             <div>
               <div className="section-kicker mb-4">Technical flow</div>
-              <h2 className="text-3xl text-[#171412] lg:text-4xl" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <h2 className="text-3xl text-[var(--color-ink)] lg:text-4xl" style={{ fontFamily: "'Playfair Display', serif" }}>
                 How Sorbon decompiles Soroban contracts
               </h2>
             </div>
-            <p className="max-w-xl text-[15px] leading-8 text-[#5d5549]">
+            <p className="max-w-xl text-[15px] leading-8 text-[var(--color-ink-secondary)]">
               A staged browser-side pipeline that extracts spec data, simulates execution, recognizes Soroban SDK patterns, and emits readable Rust.
             </p>
           </div>
@@ -186,14 +186,14 @@ const ExpandableFeatures = () => {
                   <button
                     disabled={expandedIndex === 0}
                     onClick={() => handleSelect(expandedIndex - 1)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[#b5a995] bg-white text-[#3a342c] shadow-sm transition-colors hover:border-[#f08b57] hover:text-[#f08b57] disabled:opacity-30"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-ink-pill)] bg-[var(--color-surface)] text-[var(--color-ink-dark)] shadow-sm transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] disabled:opacity-30"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 15l-6-6-6 6"/></svg>
                   </button>
                   <button
                     disabled={expandedIndex === features.length - 1}
                     onClick={() => handleSelect(expandedIndex + 1)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[#b5a995] bg-white text-[#3a342c] shadow-sm transition-colors hover:border-[#f08b57] hover:text-[#f08b57] disabled:opacity-30"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-ink-pill)] bg-[var(--color-surface)] text-[var(--color-ink-dark)] shadow-sm transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] disabled:opacity-30"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 9l6 6 6-6"/></svg>
                   </button>
@@ -225,8 +225,8 @@ const ExpandableFeatures = () => {
                       }}
                       className={`group relative min-w-0 max-w-xs overflow-hidden rounded-3xl text-left ring-1 transition-colors duration-500 max-md:mx-auto ${
                         isActive
-                          ? 'w-full bg-[rgba(255,252,247,0.88)] shadow-md shadow-black/5 ring-[#d1c5b4]'
-                          : 'ring-transparent text-[#6b6156] hover:text-[#3a342c]'
+                          ? 'w-full bg-[rgba(255,252,247,0.88)] shadow-md shadow-black/5 ring-[var(--color-sand-deep)]'
+                          : 'ring-transparent text-[var(--color-ink-brown)] hover:text-[var(--color-ink-dark)]'
                       }`}
                     >
                       {isActive && (
@@ -257,11 +257,11 @@ const ExpandableFeatures = () => {
                             transition={{ duration: 0.6, type: 'spring', bounce: 0.2 }}
                             className="relative px-6"
                           >
-                            <div className="mb-3 text-[10px] uppercase tracking-[0.24em] text-[#a48a73]">
+                            <div className="mb-3 text-[10px] uppercase tracking-[0.24em] text-[var(--color-ink-warm)]">
                               Stage {index + 1}
                             </div>
-                            <p className="text-[15px] leading-8 text-[#5d5549]">
-                              <strong className="text-[#171412]">{feature.title}.</strong>{' '}
+                            <p className="text-[15px] leading-8 text-[var(--color-ink-secondary)]">
+                              <strong className="text-[var(--color-ink)]">{feature.title}.</strong>{' '}
                               {feature.description}
                             </p>
                           </motion.div>

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { decompileWasm, inspectWasm, importsWasm } from '../lib/wasm';
 import { NETWORKS } from '../data/contracts';
+import * as StellarSdk from '@stellar/stellar-sdk';
 
 export interface SpecJson {
   wasm_size: number;
@@ -49,11 +50,37 @@ export function useDecompiler() {
 }
 
 async function runPipeline(bytes: Uint8Array) {
-  const [rustSource, specJson, importsJson] = await Promise.all([
-    decompileWasm(bytes),
+  // Run inspect/imports first — they're lighter and succeed even when decompile fails
+  const [specJson, importsJson] = await Promise.all([
     inspectWasm(bytes),
     importsWasm(bytes),
   ]);
+
+  let rustSource: string;
+  try {
+    rustSource = await decompileWasm(bytes);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const isStackOverflow = msg === 'unreachable' || msg.includes('RuntimeError');
+    if (isStackOverflow) {
+      // Try signatures-only mode as fallback
+      try {
+        rustSource = await decompileWasm(bytes, true);
+      } catch {
+        rustSource = '';
+      }
+      throw Object.assign(
+        new Error(
+          isStackOverflow
+            ? 'WASM_STACK_OVERFLOW'
+            : msg
+        ),
+        { sigsOutput: rustSource }
+      );
+    }
+    throw e;
+  }
+
   return { rustSource, specJson, importsJson };
 }
 
@@ -76,7 +103,19 @@ export function DecompilerProvider({ children }: { children: ReactNode }) {
       setRustSource(result.rustSource);
       setSpecJson(result.specJson);
       setImportsJson(result.importsJson);
-    } catch (e) {
+    } catch (e: any) {
+      // On stack overflow, we still have spec/imports from the pipeline
+      if (e.message === 'WASM_STACK_OVERFLOW') {
+        // Set whatever partial results we got
+        const sigsOutput = e.sigsOutput || '';
+        setRustSource(sigsOutput);
+        // Re-run inspect/imports since they succeed independently
+        try {
+          const [spec, imp] = await Promise.all([inspectWasm(bytes), importsWasm(bytes)]);
+          setSpecJson(spec);
+          setImportsJson(imp);
+        } catch { /* ignore */ }
+      }
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
@@ -111,55 +150,47 @@ export function DecompilerProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const net = NETWORKS.find((n) => n.value === networkValue) ?? NETWORKS[0];
-      const rpc = net.rpc;
+      const server = new StellarSdk.rpc.Server(net.rpc);
 
-      // Step 1: Get contract instance to find WASM hash
-      const instanceRes = await fetch(rpc, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'getLedgerEntries',
-          params: {
-            keys: [
-              {
-                type: 'CONTRACT_DATA',
-                contract: contractId,
-                key: 'LedgerKeyContractInstance',
-                durability: 'persistent',
-              },
-            ],
-          },
-        }),
-      });
-      const instanceData = await instanceRes.json();
-      const entries = instanceData?.result?.entries;
-      if (!entries?.length) throw new Error('Contract not found on ' + net.label);
+      // Step 1: Get contract instance to extract WASM hash
+      const instanceKey = StellarSdk.xdr.LedgerKey.contractData(
+        new StellarSdk.xdr.LedgerKeyContractData({
+          contract: new StellarSdk.Address(contractId).toScAddress(),
+          key: StellarSdk.xdr.ScVal.scvLedgerKeyContractInstance(),
+          durability: StellarSdk.xdr.ContractDataDurability.persistent(),
+        })
+      );
 
-      // The WASM hash is embedded in the contract instance XDR.
-      // For simplicity, try the getContractWasmByContractId approach
-      const wasmRes = await fetch(rpc, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 2,
-          method: 'getContractWasmByContractId',
-          params: { contract_id: contractId },
-        }),
-      });
-      const wasmData = await wasmRes.json();
+      const response = await server.getLedgerEntries(instanceKey);
 
-      if (wasmData?.result?.wasm) {
-        const binary = Uint8Array.from(atob(wasmData.result.wasm), (c) => c.charCodeAt(0));
-        await processBytes(binary, contractId.slice(0, 8) + '...');
-      } else {
-        // Fallback: extract from ledger entry XDR
-        throw new Error(
-          'Could not fetch WASM code. The RPC may not support getContractWasmByContractId. Try uploading the .wasm file directly.'
-        );
+      if (!response.entries || response.entries.length === 0) {
+        throw new Error(`Contract not found on ${net.label}. Check the contract ID and network.`);
       }
+
+      const entry = response.entries[0];
+      const contractData = entry.val.contractData();
+      const contractInstance = contractData.val().instance();
+      const executable = contractInstance.executable();
+
+      if (executable.switch().name !== 'contractExecutableWasm') {
+        throw new Error('This is a Stellar Asset Contract (SAC) — no custom WASM to decompile.');
+      }
+
+      const wasmHash = executable.wasmHash();
+
+      // Step 2: Fetch the WASM code by hash
+      const wasmKey = StellarSdk.xdr.LedgerKey.contractCode(
+        new StellarSdk.xdr.LedgerKeyContractCode({ hash: wasmHash })
+      );
+      const wasmResponse = await server.getLedgerEntries(wasmKey);
+
+      if (!wasmResponse.entries || wasmResponse.entries.length === 0) {
+        throw new Error('WASM code not found on ledger. It may have expired.');
+      }
+
+      const wasmCode = wasmResponse.entries[0].val.contractCode().code();
+
+      await processBytes(new Uint8Array(wasmCode), contractId.slice(0, 8) + '...' + contractId.slice(-4));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setLoading(false);
