@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 const Diamond = () => (
   <svg width="6" height="12" viewBox="0 0 4 12" className="inline-block shrink-0">
@@ -9,39 +9,19 @@ const Diamond = () => (
 
 export { Diamond };
 
+// Hardcoded light theme — no toggle
 function useTheme() {
-  const [dark, setDark] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const stored = localStorage.getItem('theme');
-    if (stored) return stored === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark);
-    localStorage.setItem('theme', dark ? 'dark' : 'light');
-  }, [dark]);
-
-  return [dark, () => setDark((d) => !d)] as const;
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
+  }, []);
 }
-
-const SunIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-  </svg>
-);
-
-const MoonIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-  </svg>
-);
 
 const Layout = () => {
   const location = useLocation();
   const isStudio = location.pathname === '/studio';
   const isLanding = location.pathname === '/';
-  const [dark, toggleTheme] = useTheme();
+  useTheme();
 
   return (
     <div className={`${isStudio ? 'h-screen overflow-hidden' : 'min-h-screen'} bg-[var(--color-sand-paper)] text-[var(--color-ink-base)] font-mono selection:bg-[var(--color-accent-alt)] selection:text-white`}>
@@ -94,13 +74,6 @@ const Layout = () => {
                 {item.label}
               </NavLink>
             ))}
-            <button
-              onClick={toggleTheme}
-              className="ml-2 flex items-center justify-center rounded-full border border-[var(--color-sand-border)] bg-[var(--color-surface)]/70 p-2 text-[var(--color-ink-nav)] transition-colors hover:border-[var(--color-ink)] hover:text-[var(--color-ink)]"
-              aria-label="Toggle theme"
-            >
-              {dark ? <SunIcon /> : <MoonIcon />}
-            </button>
             <a
               href="https://github.com/Gmin2/soroban-decoder"
               target="_blank"
